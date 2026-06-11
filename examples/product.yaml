@@ -1,0 +1,64 @@
+version: 0.1
+title: Product Discovery Example
+
+nodes:
+  - id: segment
+    kind: goal
+    state: active
+    title: 重度知识工作者
+    note: 目标用户需要恢复长期项目上下文，而不只是管理待办事项。
+
+  - id: opportunity
+    kind: question
+    state: active
+    title: 探索状态恢复成本高
+    note: 用户隔几周回来难以知道当前主线、死路和下一步。
+
+  - id: assumption
+    kind: hypothesis
+    state: active
+    title: 图谱视图能降低恢复成本
+    note: 需要验证是否比 Markdown summary 更有效。
+
+  - id: experiment
+    kind: attempt
+    state: candidate
+    title: 5 人可用性测试
+    note: 比较 Markdown summary 和 graph view 的上下文恢复速度。
+
+  - id: insight
+    kind: evidence
+    state: done
+    title: 用户不想在图上编辑
+    note: 编辑应在 YAML，图只作为 view。
+
+  - id: decision
+    kind: decision
+    state: active
+    title: MVP = schema + check + render
+    note: 不做复杂图编辑器。
+
+edges:
+  - from: segment
+    to: opportunity
+    kind: supports
+  - from: opportunity
+    to: assumption
+    kind: tests
+  - from: assumption
+    to: experiment
+    kind: tests
+  - from: insight
+    to: decision
+    kind: supports
+  - from: decision
+    to: experiment
+    kind: selects
+
+sets:
+  mainline: [segment, opportunity, assumption, decision]
+  frontier: [assumption, experiment]
+
+render:
+  default_view: frontier
+  views: [flow, cluster, frontier]

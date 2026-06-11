@@ -1,0 +1,56 @@
+version: 0.1
+title: Research Planning Example
+
+nodes:
+  - id: goal
+    kind: goal
+    state: active
+    title: 形成可毕业的研究主线
+    note: 需要有可验证的问题定义、可执行实验和算法贡献。
+
+  - id: q-novelty
+    kind: question
+    state: blocked
+    title: 技术贡献是否足够
+    state_note: 需要通过文献和 baseline 判断是否只是普通组合。
+
+  - id: h-coupling
+    kind: hypothesis
+    state: active
+    title: 多事件耦合可以作为贡献入口
+    note: 通过事件关系改进检测、后处理或解释。
+
+  - id: e-mature
+    kind: evidence
+    state: done
+    title: 已有检测器较成熟
+    note: 这削弱了“简单组合检测器”的贡献强度。
+
+  - id: d-mainline
+    kind: decision
+    state: active
+    title: 先验证耦合路线
+    note: 保留慢波和多模态路线作为备选。
+
+edges:
+  - from: goal
+    to: q-novelty
+    kind: decomposes_to
+  - from: q-novelty
+    to: h-coupling
+    kind: tests
+  - from: e-mature
+    to: h-coupling
+    kind: refutes
+    label: 削弱朴素版本
+  - from: h-coupling
+    to: d-mainline
+    kind: supports
+
+sets:
+  mainline: [goal, q-novelty, h-coupling, d-mainline]
+  frontier: [q-novelty, h-coupling]
+
+render:
+  default_view: flow
+  views: [flow, cluster, frontier]

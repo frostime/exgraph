@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.exgraph-cache/
+.DS_Store
+*.log

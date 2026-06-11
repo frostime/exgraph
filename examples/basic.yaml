@@ -1,0 +1,96 @@
+version: 0.1
+title: ExGraph Basic Example
+
+nodes:
+  - id: g1
+    kind: goal
+    state: active
+    title: 管理长线探索任务状态
+    note: 目标是让 User/Agent 能恢复主线、前沿、死节点和关键判断关系。
+    tags: [mainline]
+
+  - id: q1
+    kind: question
+    state: active
+    title: 如何降低上下文恢复成本
+    note: 用户隔几天回来后，需要快速知道主线、前沿、阻塞和废弃路线。
+    tags: [mainline]
+
+  - id: h1
+    kind: hypothesis
+    state: active
+    title: YAML-first 图谱可以降低维护成本
+    note: User/Agent 只维护 YAML；engine 负责 check、layout、render。
+    tags: [frontier, mainline]
+
+  - id: h2
+    kind: option
+    state: closed
+    title: 做复杂图上编辑器
+    note: 曾经考虑直接做浏览器图编辑器。
+    state_note: >
+      关闭原因：图上编辑过重，违背低负担使用模式。
+      可复用：focus、filter、path highlight 这些查看交互。
+      重开条件：后续发现 YAML 编辑无法承载真实使用场景。
+    tags: [dead]
+
+  - id: r1
+    kind: risk
+    state: blocked
+    title: 图谱膨胀风险
+    state_note: 如果没有 lint / filter / sets，图谱会成为新的认知负担。
+    tags: [frontier]
+
+  - id: d1
+    kind: decision
+    state: active
+    title: v0 保持轻工具形态
+    note: 不做平台，不做图编辑器；只做 YAML check/render/serve。
+    tags: [mainline]
+
+  - id: a1
+    kind: artifact
+    state: candidate
+    title: 本地 CLI 原型
+    note: validate → normalize → render → serve。
+    tags: [next]
+
+edges:
+  - from: g1
+    to: q1
+    kind: decomposes_to
+    label: 拆解
+
+  - from: q1
+    to: h1
+    kind: tests
+    label: 检验
+
+  - from: h2
+    to: h1
+    kind: supersedes
+    label: 被替代
+
+  - from: r1
+    to: d1
+    kind: blocks
+    label: 风险
+
+  - from: h1
+    to: d1
+    kind: supports
+    label: 支持
+
+  - from: d1
+    to: a1
+    kind: produces
+    label: 产出
+
+sets:
+  mainline: [g1, q1, h1, d1]
+  frontier: [h1, r1]
+  archive: [h2]
+
+render:
+  default_view: frontier
+  views: [flow, cluster, frontier]

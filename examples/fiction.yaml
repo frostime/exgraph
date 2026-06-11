@@ -1,0 +1,59 @@
+version: 0.1
+title: Fiction Planning Example
+
+nodes:
+  - id: theme
+    kind: goal
+    state: active
+    title: 选择必须付出代价
+    note: 主题约束人物弧线和关键场景。
+
+  - id: arc-main
+    kind: hypothesis
+    state: active
+    title: 主角从逃避到承担
+    note: 所有高潮场景都应推动或检验这个弧线。
+
+  - id: scene-false-accuse
+    kind: attempt
+    state: active
+    title: 第三方栽赃造成误会
+    note: 保留冲突强度，但不直接破坏女主可信度。
+
+  - id: branch-betrayal
+    kind: option
+    state: closed
+    title: 女主早期背叛主角
+    state_note: >
+      关闭原因：破坏后续信任修复的可信度。
+      可复用：对峙台词和情绪强度。
+      重开条件：故事转向更黑暗的路线。
+
+  - id: draft-ch7
+    kind: artifact
+    state: active
+    title: 第七章对峙草稿
+    note: 当前正文片段依赖误会路线。
+
+edges:
+  - from: theme
+    to: arc-main
+    kind: supports
+  - from: arc-main
+    to: scene-false-accuse
+    kind: supports
+  - from: branch-betrayal
+    to: scene-false-accuse
+    kind: supersedes
+  - from: scene-false-accuse
+    to: draft-ch7
+    kind: produces
+
+sets:
+  mainline: [theme, arc-main, scene-false-accuse, draft-ch7]
+  frontier: [scene-false-accuse, draft-ch7]
+  archive: [branch-betrayal]
+
+render:
+  default_view: cluster
+  views: [flow, cluster, frontier]

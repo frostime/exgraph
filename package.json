@@ -1,0 +1,33 @@
+{
+  "name": "exgraph",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "YAML-first exploration graph renderer for Agent-assisted long-running work.",
+  "bin": {
+    "exgraph": "dist/cli.js"
+  },
+  "scripts": {
+    "dev": "tsx src/cli.ts",
+    "build": "tsc",
+    "check": "tsc --noEmit",
+    "serve:example": "tsx src/cli.ts serve examples/basic.yaml",
+    "export:example": "tsx src/cli.ts export examples/basic.yaml -o /tmp/exgraph-export",
+    "lint:example": "tsx src/cli.ts check examples/basic.yaml"
+  },
+  "dependencies": {
+    "cac": "^6.7.14",
+    "cytoscape": "^3.30.4",
+    "cytoscape-dagre": "^2.5.0",
+    "cytoscape-fcose": "^2.2.0",
+    "vite": "^5.4.11",
+    "yaml": "^2.6.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

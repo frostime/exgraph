@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ExGraph Viewer</title>
+  <!-- EXGRAPH_EMBED -->
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div>
+        <h1 id="graph-title">ExGraph Viewer</h1>
+        <p id="graph-subtitle">YAML-first exploration graph viewer</p>
+      </div>
+      <div class="toolbar">
+        <button data-layout="flow">Flow</button>
+        <button data-layout="cluster">Cluster</button>
+        <button data-layout="frontier">Frontier</button>
+      </div>
+    </header>
+    <main class="layout">
+      <aside class="panel left-panel">
+        <section>
+          <h2>Filters</h2>
+          <label>Kind <select id="kind-filter"></select></label>
+          <label>State <select id="state-filter"></select></label>
+          <label>Edge <select id="edge-filter"></select></label>
+          <label>Set <select id="set-filter"></select></label>
+          <label>Search <input id="search" placeholder="id / title / note / tag" /></label>
+          <label class="inline"><input type="checkbox" id="hide-closed" /> Hide closed / archived</label>
+        </section>
+        <section>
+          <h2>Diagnostics</h2>
+          <div id="diagnostics"></div>
+        </section>
+      </aside>
+      <section class="canvas-card">
+        <div id="cy"></div>
+      </section>
+      <aside class="panel right-panel">
+        <section>
+          <h2 id="detail-title">Graph Summary</h2>
+          <div id="detail"></div>
+        </section>
+      </aside>
+    </main>
+  </div>
+  <script type="module" src="/main.ts"></script>
+</body>
+</html>
