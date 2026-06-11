@@ -1,5 +1,8 @@
 version: 0.1
 title: Fiction Planning Example
+description: Fiction planning example for ExGraph
+created: 2026-06-11
+updated: 2026-06-11
 
 nodes:
   - id: theme

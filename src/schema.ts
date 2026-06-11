@@ -43,6 +43,9 @@ export const renderConfigSchema = z.object({
 export const exGraphSchema = z.object({
   version: z.union([z.string(), z.number()]),
   title: z.string().min(1),
+  description: z.string().optional(),
+  created: z.string().optional(),
+  updated: z.string().optional(),
   nodes: z.array(nodeSchema),
   edges: z.array(edgeSchema).optional(),
   sets: z.record(z.array(z.string().min(1))).optional(),

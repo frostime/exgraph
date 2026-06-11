@@ -1,5 +1,8 @@
 version: 0.1
 title: ExGraph Basic Example
+description: A basic example demonstrating ExGraph features
+created: 2026-06-11
+updated: 2026-06-11
 
 nodes:
   - id: g1

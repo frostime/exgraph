@@ -47,6 +47,9 @@ export type RenderConfig = {
 export type ExGraph = {
   version: string | number;
   title: string;
+  description?: string;
+  created?: string;
+  updated?: string;
   nodes: ExGraphNode[];
   edges?: ExGraphEdge[];
   sets?: Record<string, string[]>;
@@ -70,6 +73,9 @@ export type NormalizedEdge = Required<Pick<ExGraphEdge, 'from' | 'to' | 'kind' |
 export type NormalizedGraph = {
   version: string;
   title: string;
+  description?: string;
+  created?: string;
+  updated?: string;
   nodes: NormalizedNode[];
   edges: NormalizedEdge[];
   sets: Record<string, string[]>;

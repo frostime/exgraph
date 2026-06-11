@@ -2,6 +2,9 @@ import fs from 'node:fs/promises';
 
 const TEMPLATE = `version: 0.1
 title: Example Exploration Graph
+description: A brief description of this exploration graph
+created: 2026-06-11
+updated: 2026-06-11
 
 nodes:
   - id: g1
@@ -44,7 +47,7 @@ sets:
   archive: [h2]
 
 render:
-  default_view: frontier
+  default_view: flow
   views: [flow, cluster, frontier]
 `;
 

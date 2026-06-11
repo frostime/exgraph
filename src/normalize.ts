@@ -48,6 +48,9 @@ export function normalizeGraph(graph: ExGraph): NormalizedGraph {
   return {
     version: String(graph.version),
     title: graph.title,
+    description: graph.description,
+    created: graph.created,
+    updated: graph.updated,
     nodes,
     edges: normalizedEdges,
     sets,

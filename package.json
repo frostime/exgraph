@@ -1,6 +1,6 @@
 {
   "name": "@frostime/exgraph",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": "frostime",
   "license": "GPL-3.0",
   "type": "module",
@@ -12,6 +12,7 @@
     "dist",
     "skills",
     "viewer/index.html",
+    "viewer/main.ts",
     "viewer/style.css"
   ],
   "keywords": [
