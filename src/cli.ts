@@ -85,7 +85,7 @@ Docs directory: ${skillsDir}
       any multi-path investigation.`,
   });
 });
-const package_file = path.join(__dirname, '..', 'package.json');
+const package_file = path.join(__dirname, '..', '..', 'package.json');
 const { version } = JSON.parse(fs.readFileSync(package_file, 'utf-8'));
 cli.version(version);
 cli.parse();
