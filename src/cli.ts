@@ -1,10 +1,14 @@
 #!/usr/bin/env node
 import { cac } from 'cac';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { initGraph } from './init.js';
 import { checkGraphFile } from './check.js';
 import { formatDiagnostics } from './format.js';
 import { serveGraph } from './serve.js';
 import { exportGraph } from './export.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const cli = cac('exgraph');
 
@@ -60,6 +64,22 @@ cli
     }
   });
 
-cli.help();
+cli.help((sections) => {
+  const skillsDir = path.join(__dirname, '..', 'skills');
+  const skillPath = path.join(skillsDir, 'write-exgraph', 'SKILL.md');
+  sections.push({
+    title: 'AGENT DOCS',
+    body: `The following SKILL docs are bundled with this CLI. Agents: read
+them directly from the filesystem to learn proper usage.
+
+Docs directory: ${skillsDir}
+
+  • write-exgraph
+      path: ${skillPath}
+      Build and maintain exploration graphs for long-running, open-ended work.
+      Use when the user is managing research, writing, product discovery, or
+      any multi-path investigation.`,
+  });
+});
 cli.version('0.1.0');
 cli.parse();

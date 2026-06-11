@@ -1,12 +1,17 @@
 {
-  "name": "exgraph",
+  "name": "@frostime/exgraph",
   "version": "0.1.0",
   "private": true,
+  "author": "frostime",
   "type": "module",
   "description": "YAML-first exploration graph renderer for Agent-assisted long-running work.",
   "bin": {
     "exgraph": "dist/src/cli.js"
   },
+  "files": [
+    "dist",
+    "skills"
+  ],
   "scripts": {
     "dev": "tsx src/cli.ts",
     "build": "tsc",
