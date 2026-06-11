@@ -5,7 +5,7 @@
   "type": "module",
   "description": "YAML-first exploration graph renderer for Agent-assisted long-running work.",
   "bin": {
-    "exgraph": "dist/cli.js"
+    "exgraph": "dist/src/cli.js"
   },
   "scripts": {
     "dev": "tsx src/cli.ts",
