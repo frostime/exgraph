@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { cac } from 'cac';
 import path from 'path';
+import fs from 'fs';
+
 import { fileURLToPath } from 'url';
 import { initGraph } from './init.js';
 import { checkGraphFile } from './check.js';
@@ -83,5 +85,7 @@ Docs directory: ${skillsDir}
       any multi-path investigation.`,
   });
 });
-cli.version('0.1.0');
+const package_file = path.join(__dirname, '..', 'package.json');
+const { version } = JSON.parse(fs.readFileSync(package_file, 'utf-8'));
+cli.version(version);
 cli.parse();
