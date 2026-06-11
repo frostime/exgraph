@@ -3,3 +3,4 @@ dist/
 .exgraph-cache/
 .DS_Store
 *.log
+*.tgz

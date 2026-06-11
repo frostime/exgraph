@@ -11,5 +11,6 @@
     "rootDir": ".",
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "viewer/**/*.ts", "viewer/**/*.d.ts"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["viewer", "dist", "node_modules"]
 }

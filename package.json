@@ -1,8 +1,8 @@
 {
   "name": "@frostime/exgraph",
   "version": "0.1.0",
-  "private": true,
   "author": "frostime",
+  "license": "GPL-3.0",
   "type": "module",
   "description": "YAML-first exploration graph renderer for Agent-assisted long-running work.",
   "bin": {
@@ -10,8 +10,27 @@
   },
   "files": [
     "dist",
-    "skills"
+    "skills",
+    "viewer/index.html",
+    "viewer/style.css"
   ],
+  "keywords": [
+    "exploration-graph",
+    "yaml",
+    "agent",
+    "knowledge-graph",
+    "state-management",
+    "research",
+    "long-running-work"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/frostime/exgraph.git"
+  },
+  "homepage": "https://github.com/frostime/exgraph",
+  "bugs": {
+    "url": "https://github.com/frostime/exgraph/issues"
+  },
   "scripts": {
     "dev": "tsx src/cli.ts",
     "build": "tsc",

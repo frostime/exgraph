@@ -81,4 +81,8 @@ render:
 - `spec/ENGINE_SPEC.md`
 - `spec/VIEW_CONTRACT.md`
 - `spec/AGENT_PROTOCOL.md`
-- `skill/SKILL.md`
+- `skills/write-exgraph/SKILL.md`
+
+## License
+
+GPL-3.0. See [LICENSE](LICENSE).

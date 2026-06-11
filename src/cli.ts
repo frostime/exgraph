@@ -65,7 +65,9 @@ cli
   });
 
 cli.help((sections) => {
-  const skillsDir = path.join(__dirname, '..', 'skills');
+  // When installed as npm package: dist/src/cli.js → ../../skills
+  // When running from source: src/cli.ts → ../skills
+  const skillsDir = path.join(__dirname, '..', '..', 'skills');
   const skillPath = path.join(skillsDir, 'write-exgraph', 'SKILL.md');
   sections.push({
     title: 'AGENT DOCS',
