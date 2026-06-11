@@ -28,7 +28,9 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font: 14px/1.5 "HarmonyOS Sans SC", "HarmonyOS Sans", "MiSans", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", "Source Han Sans SC", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
 }
 #app { height: 100vh; display: grid; grid-template-rows: auto 1fr; overflow: hidden; }
 .topbar {
@@ -106,7 +108,20 @@ label.inline { display: flex; align-items: center; gap: 8px; }
 .mini small { display: block; color: var(--muted); margin-top: 2px; }
 .pillrow { display: flex; gap: 6px; flex-wrap: wrap; }
 .pill { display: inline-block; padding: 2px 8px; border: 1px solid var(--border); background: var(--panel2); border-radius: 999px; font-size: 12px; }
-pre { white-space: pre-wrap; word-break: break-word; background: var(--panel2); border: 1px solid var(--border); border-radius: 12px; padding: 10px; font-size: 12px; }
+code,
+pre {
+  font-family: "JetBrains Mono", "Cascadia Code", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  font-size: 12px;
+}
 @media (max-width: 1150px) {
   #app { height: auto; min-height: 100vh; overflow: visible; }
   .layout { grid-template-columns: 1fr; }

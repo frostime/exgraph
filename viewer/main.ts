@@ -81,6 +81,8 @@ const edgeColor: Record<string, string> = {
   relates_to: '#8a95a3',
 };
 
+const sansFontStack = 'HarmonyOS Sans SC, HarmonyOS Sans, MiSans, Microsoft YaHei UI, PingFang SC, Noto Sans CJK SC, Source Han Sans SC, system-ui, sans-serif';
+
 let payload: Payload;
 let currentLayout: 'flow' | 'cluster' | 'frontier' = 'frontier';
 let selectedNodeId: string | null = null;
@@ -154,8 +156,12 @@ function setupControls() {
 
 function setupCytoscape() {
   const graph = payload.graph!;
+  const pixelRatio = Math.max(2, window.devicePixelRatio || 1);
+
   cy = cytoscape({
     container: document.getElementById('cy'),
+    pixelRatio,
+    wheelSensitivity: 0.18,
     elements: [
       ...graph.nodes.map((node) => ({
         group: 'nodes' as const,
@@ -190,16 +196,18 @@ function setupCytoscape() {
           'border-color': 'data(stateColor)',
           'border-width': 4,
           'label': 'data(label)',
-          'font-size': 11,
+          'font-family': sansFontStack,
+          'font-size': 13,
           'font-weight': 700,
-          'color': '#1f2328',
+          'color': '#ffffff',
           'text-wrap': 'wrap',
-          'text-max-width': 128,
+          'text-max-width': 152,
           'text-valign': 'center',
           'text-halign': 'center',
-          'width': 138,
-          'height': 54,
-          'padding': 8,
+          'text-outline-width': 0,
+          'width': 166,
+          'height': 66,
+          'padding': 10,
           'overlay-padding': 8,
         },
       },
@@ -213,10 +221,12 @@ function setupCytoscape() {
           'width': 2,
           'opacity': .72,
           'label': 'data(label)',
-          'font-size': 9,
+          'font-family': sansFontStack,
+          'font-size': 11,
+          'font-weight': 600,
           'text-background-color': '#ffffff',
-          'text-background-opacity': .8,
-          'text-background-padding': 2,
+          'text-background-opacity': .86,
+          'text-background-padding': 3,
           'color': '#667085',
         },
       },
@@ -254,8 +264,34 @@ function setLayout(layout: 'flow' | 'cluster' | 'frontier') {
   });
 
   const options = layoutOptions(layout);
-  cy.layout(options as cytoscape.LayoutOptions).run();
-  applyFilters();
+  const layoutRun = cy.layout(options as cytoscape.LayoutOptions);
+
+  cy.one('layoutstop', () => {
+    applyFilters();
+    keepReadableViewport(layout);
+  });
+
+  layoutRun.run();
+}
+
+function keepReadableViewport(layout: 'flow' | 'cluster' | 'frontier') {
+  const visible = cy.elements().not('.hidden');
+  if (!visible.length) return;
+
+  cy.minZoom(0.75);
+  cy.maxZoom(2.8);
+
+  const padding = layout === 'flow' ? 90 : 70;
+  cy.fit(visible, padding);
+
+  const minReadableZoom = layout === 'flow' ? 0.88 : 0.82;
+  if (cy.zoom() < minReadableZoom) {
+    cy.zoom({
+      level: minReadableZoom,
+      renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 },
+    });
+    cy.center(visible);
+  }
 }
 
 function layoutOptions(layout: 'flow' | 'cluster' | 'frontier') {
@@ -267,26 +303,26 @@ function layoutOptions(layout: 'flow' | 'cluster' | 'frontier') {
       rankSep: 110,
       edgeSep: 20,
       animate: false,
-      fit: true,
-      padding: 40,
+      fit: false,
+      padding: 90,
     };
   }
   if (layout === 'cluster') {
     return {
       name: 'fcose',
       animate: false,
-      fit: true,
-      padding: 50,
-      nodeRepulsion: 6200,
-      idealEdgeLength: 110,
+      fit: false,
+      padding: 80,
+      nodeRepulsion: 7200,
+      idealEdgeLength: 140,
     };
   }
   return {
     name: 'concentric',
     animate: false,
-    fit: true,
-    padding: 50,
-    minNodeSpacing: 42,
+    fit: false,
+    padding: 80,
+    minNodeSpacing: 68,
     concentric: (node: cytoscape.NodeSingular) => node.data('setRank'),
     levelWidth: () => 1,
   };

@@ -1,0 +1,5453 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<conversation>
+  <message role="user">
+    <content>在长线任务管理过程中，经常出现复杂的尝试、 假设、 分支、 .... 等等
+
+容易失焦
+
+这种情况下，是否可以通过一种图谱的模式，展现状态的依赖关系？
+
+可能会有：
+
+- 已经标记完成、 关闭的节点；未来可能的节点，当前的指针状态
+- 不同节点类型，不同的曲线依赖关系等
+
+请你分析这个想法，并调研相关专业领域是否已经有完善的论述建模</content>
+  </message>
+  <message role="assistant">
+    <content>我会把它分成两层：先判断“图谱化长线任务状态”是否是正确抽象，再对照已有领域模型，避免重新发明一套混乱的任务图。
+
+初步判断：你的直觉是对的，但“任务图谱”不能只做成依赖图。它至少要同时表达**执行依赖、问题/假设空间、证据来源、决策记录、当前工作指针**五类关系。
+
+## 结论
+
+**可以，而且很适合。**但更准确地说，它不是普通“任务图谱”，而是一个**长线工作状态图 / typed project knowledge graph**：
+
+用图结构表达：目标、问题、假设、尝试、证据、决策、任务、产物之间的依赖、分支、废弃、继承和当前推进位置。
+
+它解决的核心问题不是“任务排期”，而是：
+
+**在长期探索型任务中，避免失去上下文、重复尝试、忘记为什么放弃某条路、误把局部进展当成全局进展。**
+
+## 1. 这个想法为什么成立
+
+长线任务失焦，通常不是因为任务太多，而是因为几类信息被混在一起：
+信息类型常见混乱目标最终要解决什么问题变模糊假设临时猜想被当成事实尝试做过什么、失败在哪、是否可复用丢失分支多条路线并行后不知道主线在哪里依赖当前卡住是因为任务未做、证据不足、还是决策未定决策只记得“选了 A”，忘了为什么没选 B状态done / closed / abandoned / superseded 混为一谈
+图谱模型的优势是：**它不强迫复杂任务线性化**。复杂研究、工程、写作、Agent workflow 本来就是网状结构：有依赖、有证据、有分支、有回滚、有废案、有继承。
+
+## 2. 但不能只建“任务依赖图”
+
+单纯的任务依赖图通常只能表达：
+```
+A 完成后才能做 B
+B 完成后才能做 C
+```
+
+这对探索型任务不够。你描述的场景还需要表达：
+```
+假设 H1 促成尝试 E1
+E1 产生证据 O1
+O1 反驳 H1，但支持 H2
+因此路线 R1 被关闭，路线 R2 成为当前主线
+任务 T3 依赖 H2 的验证结果
+```
+
+所以应该建成**typed graph**，即节点和边都有类型。
+
+## 3. 建议的核心模型
+
+### 3.1 节点类型
+节点类型含义`Goal`长期目标 / 成功标准`Problem`当前要解决的问题`Question`未回答的关键问题`Hypothesis`假设、判断、路线猜想`Option`可选方案 / 分支`Experiment`尝试、实验、调研、验证动作`Evidence`观察结果、数据、引用、测试结果`Decision`已作出的选择`Task`可执行动作`Artifact`产物：文档、代码、图、报告`Risk`风险、阻塞、失败条件`Milestone`阶段性检查点`Cursor`当前工作指针 / active frontier
+### 3.2 状态类型
+状态含义`candidate`未来可能做，但未承诺`active`当前正在推进`blocked`被依赖或风险阻塞`validated`已验证成立`invalidated`已验证不成立`done`已完成，且产物有效`closed`已关闭，不再推进`superseded`被新节点替代`archived`保留记录，但不参与当前计划
+关键点：**closed 不等于 done。**很多长线任务里，关闭节点比完成节点更重要，因为它保留了“为什么这条路不走”的知识。
+
+### 3.3 边类型
+边类型语义`depends_on`执行依赖`blocks`阻塞`decomposes_to`目标/问题拆解`tests`某尝试用于检验某假设`supports`证据支持假设`refutes`证据反驳假设`produces`尝试产生产物/证据`consumes`任务使用某证据/产物`selects`决策选择某方案`rejects`决策排除某方案`supersedes`新节点替代旧节点`forks_from`分支来源`merges_into`分支合并`causes`因果关系`precedes`时间顺序
+你提到的“不同曲线依赖关系”可以做成视觉编码，但底层不要只靠曲线形状。底层应该是明确的 edge type，否则图会变成漂亮但不可查询的草图。
+
+## 4. 相关专业领域已经有很多成熟部分
+
+### 4.1 项目管理：PERT / CPM / DSM
+
+项目管理早就使用网络图表示任务依赖和关键路径。CPM 关注哪些任务链决定最短项目工期；PERT 更适合不确定工期的复杂项目。PMI 资料中也使用 Activity-on-Node 方式解释网络计划和关键路径计算。
+
+DSM，即 Design / Dependency Structure Matrix，是用矩阵表达系统元素之间依赖关系的方法，适合复杂系统、工程项目、设计任务中的依赖分析。DSMweb 将它定义为表示系统元素关系的方阵模型。
+
+**适用部分**：任务依赖、关键路径、阻塞传播。**不足**：不擅长表达“假设—证据—决策—废案”的知识演化。
+
+### 4.2 工作流建模：BPMN、Petri Net、Workflow Net
+
+BPMN 是业务流程建模的事实标准，OMG 说明其目标是让流程图能被业务利益相关者直接使用。它适合表达活动、事件、网关、并行、条件分支、消息流。
+
+Petri net / workflow net 在流程挖掘、并发流程和形式化验证中常用，特别适合讨论状态、token、可达性、死锁、并发和流程一致性。近期 process mining 研究仍然使用 Petri net 作为严格流程表达语言。
+
+**适用部分**：流程状态、并发、分支、回路、自动化执行。**不足**：对探索型知识、假设推翻、理由记录支持较弱。
+
+### 4.3 状态机 / Statecharts
+
+Harel 的 Statecharts 是经典视觉形式化工具，用于描述复杂反应式系统，解决普通有限状态机在层级、并发和复杂状态组合上的表达不足。
+
+你的“当前指针状态”“节点完成/关闭/未来可能节点”很适合借鉴 state machine / statechart 思路：
+```
+candidate → active → blocked → active → done
+candidate → active → invalidated → closed
+candidate → active → superseded → archived
+```
+
+**适用部分**：节点生命周期。**不足**：状态机只描述状态转移，不描述复杂知识依赖。
+
+### 4.4 Design Rationale：IBIS / QOC / ADR
+
+这是与你的问题最接近的领域之一。
+
+IBIS，即 Issue-Based Information System，用 issue / position / argument 来组织复杂问题讨论，常用于 wicked problems、设计理由、问题澄清和决策过程记录。
+
+IBIS / QOC 这类图式方法被归入 design rationale，即记录“为什么这样设计，而不是只记录最后结果”。Shum 等人讨论过 gIBIS、QOC 等基于图的 argumentation-based rationale 方法，也指出捕获 rationale 的开销是长期问题。
+
+ADR，即 Architecture Decision Record，用轻量文本记录重要架构决策、上下文、备选方案、取舍和后果；ADR 集合构成 decision log。
+
+**适用部分**：为什么选择某路线、为什么关闭某分支、哪些假设被证据支持。**不足**：通常不负责实际任务执行状态和依赖调度。
+
+### 4.5 Provenance / Lineage：来源、证据、产物血缘
+
+W3C PROV 是表达 provenance 的标准。W3C 将 provenance 定义为关于实体、活动、人员如何参与生成某个数据或事物的信息，可用于评估质量、可靠性和可信度。
+
+这对长线任务很重要，因为很多时候你不是只需要知道“现在结论是什么”，还需要知道：
+```
+这个结论来自哪个实验？
+实验基于哪个假设？
+假设引用了哪些材料？
+这个产物由哪些中间产物生成？
+后来哪个证据推翻了它？
+```
+
+**适用部分**：证据链、产物血缘、可追溯性。**不足**：不天然表达优先级、任务推进和认知焦点。
+
+### 4.6 Issue Tracking / Software Project Graph
+
+软件工程里的 issue tracker 已经在做一部分事情：任务、bug、需求、epic、subtask、block、duplicate、relate 等。研究表明，Jira 等 issue tracker 中的 link types 可以归纳为 general relation、duplication、composition、temporal/causal、workflow 等类别；长期项目中 issue 和链接会形成复杂图，依赖概览和一致性检测本身就是研究问题。
+
+**适用部分**：工程任务图、依赖、重复、拆分、阻塞。**不足**：普通 issue tracker 对“假设—证据—决策理由”支持较弱。
+
+### 4.7 Experiment Tracking / Research Log
+
+MLflow Tracking 这类工具专门记录机器学习实验的 parameters、code versions、metrics、output files，并提供 UI 供后续比较和可视化。
+
+这说明在实验型工作中，行业实践已经承认：**只记录最终模型不够，必须记录每次 run 的参数、结果、产物和上下文。**
+
+**适用部分**：实验记录、参数组合、结果比较。**不足**：通常围绕实验 run，不覆盖一般任务管理、论证、决策和写作过程。
+
+## 5. 最合适的综合框架
+
+你的需求没有一个单一领域能完整覆盖。比较合理的组合是：
+```
+Typed Graph
+= Project dependency graph
++ Issue / hypothesis graph
++ Decision rationale graph
++ Provenance graph
++ State machine
++ Event log
+```
+
+也就是：
+
+**图谱负责结构，状态机负责生命周期，事件日志负责历史，视图负责认知负载。**
+
+### 底层数据模型
+```
+Node:
+  id: H-001
+  type: Hypothesis
+  title: &quot;慢波检测可以作为独立技术章节&quot;
+  state: active
+  confidence: 0.65
+  priority: high
+  created_at: 2026-06-11
+  updated_at: 2026-06-11
+  close_reason: null
+
+Edge:
+  from: E-003
+  to: H-001
+  type: supports
+  strength: medium
+  note: &quot;已有慢波检测问题可形成算法改进空间&quot;
+
+Event:
+  time: 2026-06-11T18:30
+  action: state_changed
+  target: H-001
+  from_state: candidate
+  to_state: active
+  reason: &quot;作为低风险备选课题进入主线评估&quot;
+```
+
+### 上层视图
+视图解决什么问题Current Frontier View当前应该推进哪些节点Dependency View什么在阻塞什么Hypothesis View哪些假设成立、待证、已推翻Decision View为什么选 A、不选 BProvenance View当前结论从哪里来Archive View哪些路线关闭了，为什么Timeline View状态如何随时间演化
+## 6. 关键设计原则
+
+### 原则 1：节点不是“任务”一元化
+
+不要把所有东西都塞进 task。否则会出现：
+```
+“调研慢波检测方法”
+“慢波检测是否能作为论文技术章节”
+“慢波检测文献综述.md”
+“决定放弃慢波路线”
+```
+
+这些看似都是任务，但语义完全不同。应该分别是：
+```
+Task / Question / Artifact / Decision
+```
+
+### 原则 2：关闭节点必须保留关闭理由
+
+长线任务最有价值的信息常常是：
+```
+为什么这条路不走？
+当时基于什么证据？
+未来什么条件变化后可以重开？
+```
+
+所以`closed`节点至少要有：
+```
+closed_reason:
+  type: lack_of_value | too_expensive | refuted | superseded | out_of_scope
+  evidence: [...]
+  reopen_condition: [...]
+```
+
+### 原则 3：区分 dependency、evidence、rationale
+
+这三种关系不能混：
+```
+A depends_on B      # 没有 B，A 不能做
+A supports B        # A 是 B 的证据
+A selected_by B     # B 这个决策选择了 A
+```
+
+很多图谱失效，就是因为所有边都叫“related”。
+
+### 原则 4：不要让图谱替代执行系统
+
+图谱负责解释复杂状态；执行仍然需要简化视图：
+```
+今天做什么？
+本周推进哪 3 个 active frontier？
+哪些 blocked 节点需要解除？
+```
+
+否则图谱会从“防失焦工具”变成“新的失焦来源”。
+
+## 7. 主要风险
+风险后果解决过度建模维护成本高于收益先限制节点类型和边类型图谱膨胀看不清主线必须有 current frontier 视图related 滥用图变成垃圾关联网络强制 typed edge状态不更新图谱失真用 event log 记录变更把废案删掉反复踩坑closed / superseded 节点保留视觉优先好看但不可查询数据语义优先，视觉只是投影
+## 8. 一个最小可行版本
+
+先不要做复杂系统。可以从 6 个节点类型、8 个边类型开始。
+
+### 节点类型
+```
+Goal
+Question
+Hypothesis
+Experiment
+Decision
+Task
+Artifact
+```
+
+### 边类型
+```
+decomposes_to
+depends_on
+tests
+supports
+refutes
+produces
+selects
+supersedes
+```
+
+### 状态
+```
+candidate
+active
+blocked
+done
+closed
+superseded
+```
+
+这已经足够覆盖大多数长线任务失焦问题。
+
+## 9. 最终判断
+
+这个方向专业上有充分依据，但现成模型通常只覆盖局部：
+领域覆盖能力PERT / CPM / DSM任务依赖强BPMN / Petri Net流程状态强Statecharts生命周期强IBIS / QOC / ADR决策理由强W3C PROV证据链、产物血缘强Issue Tracker Graph工程任务图强Experiment Tracking实验记录强
+你的目标应当不是发明一种“全新图谱”，而是组合这些成熟思想，形成一个面向长线探索任务的**Typed State-Rationale-Provenance Graph**。
+
+一句话定义：
+
+**用带类型的图保存任务、假设、证据、决策、产物和状态转移，使长期任务的当前焦点、历史分支、关闭理由和未来可能性都可追踪、可查询、可恢复。**</content>
+  </message>
+  <message role="user">
+    <content>我们讨论的工作模式似乎更适合需要探索需要创作的
+比如长线小说创作、 科研规划等；可能包含大量的“无用”“死节点”“并行、 竞争路径”等？</content>
+  </message>
+  <message role="assistant">
+    <content>是的。**这个模式最适合“探索型 / 创作型 / 研究型长线任务”，而不是普通执行型任务。**
+
+普通任务管理的核心是：
+```
+已知目标 → 拆任务 → 排期 → 执行 → 完成
+```
+
+你说的这类任务更像：
+```
+模糊目标 → 多个解释框架 → 多条路线并行试探
+→ 产生局部产物 / 证据 / 反例
+→ 某些路线死亡，某些路线合并，某些路线反过来改写目标
+```
+
+所以它不是普通 project management，而更接近**探索空间管理**。
+
+## 1. “无用节点”其实很重要
+
+在探索型任务中，很多节点表面上是无用的：
+
+- 废弃设定
+- 失败实验
+- 被推翻假设
+- 没写进正文的桥段
+- 不适合作为论文主线的研究方向
+- 证明“此路不通”的调研结果
+- 曾经合理、后来被新证据替代的判断
+
+但它们不是垃圾信息，而是**negative knowledge**：负知识。
+
+它们的价值是：
+```
+避免重复尝试
+解释当前路线为什么成立
+保留未来重启条件
+记录搜索空间已经排除了哪些区域
+```
+
+例如科研规划里：
+```
+H1: 用多事件耦合改进睡眠微结构检测
+E1: 调研已有检测器
+O1: 发现已有方法成熟，单纯融合 novelty 不足
+D1: 不把它作为主线，而改为候选辅助章节
+```
+
+这里`H1`可能没有变成最终方案，但它仍然是高价值节点，因为它解释了“为什么当前没有走这条路”。
+
+## 2. 它管理的不是任务，而是“搜索过程”
+
+更准确的抽象：
+
+长线小说、科研规划、复杂产品设计，本质上都是在一个高维可能性空间里搜索。
+
+图谱要保存的不是单纯任务状态，而是：
+```
+搜索空间中哪些区域被探索过？
+哪些路径正在竞争？
+哪些路径已经死亡？
+哪些路径暂时搁置？
+哪些路径互相依赖？
+哪些局部产物可以迁移到别的路径？
+```
+
+所以图里会天然存在：
+现象在图谱中的意义死节点已排除的可能性孤立节点尚未接入主线的灵感 / 证据并行路径多个候选解释框架或创作路线竞争路径互斥方案合并路径不同分支共享一个结论 / 设定 / 技术模块回退路径当前路线失败后可恢复的备选暂存节点目前无用，但未来可能接入反证节点证明某假设不成立
+普通任务管理会把这些看成噪声。探索型图谱要把它们当作核心资产。
+
+## 3. 小说创作和科研规划的相似性
+
+表面上它们不同，但底层结构很像。
+
+### 长线小说创作
+```
+角色设定
+→ 人物动机假设
+→ 情节节点
+→ 冲突设计
+→ 世界观规则
+→ 伏笔
+→ 草稿片段
+→ 正文产物
+```
+
+常见分支：
+```
+A 角色是否背叛？
+主角是否提前知道真相？
+世界观规则是否允许复活？
+高潮应该走悲剧还是反转？
+```
+
+这些不是线性任务，而是互相约束的设定网络。
+
+### 科研规划
+```
+研究问题
+→ 假设
+→ 文献证据
+→ 数据可得性
+→ 技术路线
+→ 实验设计
+→ 结果解释
+→ 论文主线
+```
+
+常见分支：
+```
+这个方向是否有 novelty？
+数据是否支持？
+技术难度是否可控？
+结果是否能讲成 coherent story？
+```
+
+它也不是线性任务，而是问题、证据、方法、资源、叙事之间的约束网络。
+
+二者共同点：
+
+目标本身会在探索过程中被重写。
+
+这是它们区别于普通项目管理的关键。
+
+## 4. 应该引入“节点生死观”
+
+这类系统里，节点不应该只有`todo / doing / done`。
+
+更合理的是：
+```
+seed        萌芽想法
+candidate   候选路径
+active      当前推进
+competing   与其他路径竞争
+blocked     被证据、资源或决策阻塞
+validated   被验证有效
+invalidated 被证伪
+closed      主动关闭
+archived    归档保留
+revivable   条件变化后可重启
+merged      已并入其他节点
+superseded  被新版本替代
+```
+
+尤其要区分：
+```
+done ≠ closed ≠ abandoned ≠ superseded
+```
+
+例如小说中：
+```
+“女主早期背叛主角”这个设定被关闭
+```
+
+不是因为它完成了，而是因为它破坏后续人物弧线。
+
+科研中：
+```
+“单独做慢波检测”路线被关闭
+```
+
+可能不是因为它没价值，而是因为它不足以支撑当前论文主线。
+
+## 5. “当前指针”比全图更重要
+
+探索型任务的图会很快变大。如果没有指针，它会变成认知负担。
+
+所以需要至少三种指针：
+```
+mainline_cursor       当前主线
+frontier_nodes        当前开放前沿
+parking_lot_nodes     暂存但不处理
+```
+
+可以理解为：
+指针含义主线指针现在认为最可能成功的路线前沿指针当前最需要推进 / 验证的节点停车场有价值但暂不进入工作记忆死节点区已关闭，但保留关闭理由回收区可被未来路线复用的素材
+这对小说尤其重要。否则设定、伏笔、片段、分支太多，会把作者拖进“世界观沼泽”。
+
+对科研也一样。否则会不断横跳：
+```
+慢波检测
+多模态 PSG
+长程模式
+事件耦合
+图神经网络
+双曲嵌入
+解释性分析
+```
+
+最后什么都像有价值，什么都无法收束。
+
+## 6. 这个模型的核心不是“保存一切”，而是“保存判断关系”
+
+容易误区：
+
+把所有想法都扔进图里。
+
+正确做法：
+
+只保存对未来判断有影响的信息。
+
+节点价值来自它能回答这些问题：
+```
+它支持了什么？
+它反驳了什么？
+它阻塞了什么？
+它替代了什么？
+它依赖什么？
+它未来在什么条件下可重启？
+```
+
+如果一个节点没有任何关系，它只是备忘录，不一定该进核心图。
+
+## 7. 对应的专业抽象
+
+你这个问题可以更准确地框定为：
+
+**open-ended project knowledge management**开放式项目知识管理
+
+或：
+
+**exploratory workflow graph**探索型工作流图
+
+它综合了几类已有思想：
+领域对你有用的部分Design rationale记录为什么选择 / 放弃某路线IBIS / argument mapping问题、立场、论据之间的图式结构Research notebook / lab notebook保存实验、假设、观察、结论Provenance graph记录结论和产物来源Issue graph任务、阻塞、依赖、重复、关联Knowledge graph多类型实体和关系Search tree / game tree多路径探索、剪枝、回溯State machine节点生命周期
+最贴近你的不是单一工具，而是：
+```
+Search tree + Design rationale + Provenance graph + Task state machine
+```
+
+## 8. 一个更贴切的模型名称
+
+我不建议叫“任务图谱”。太窄。
+
+可以叫：
+
+### 中文
+
+- **探索图谱**
+- **工作状态图谱**
+- **创作 / 研究路线图谱**
+- **问题空间图谱**
+- **假设—证据—决策图谱**
+- **长线项目认知图谱**
+
+### 英文
+
+- `Exploration Graph`
+- `Project Knowledge Graph`
+- `Hypothesis-Rationale Graph`
+- `State-Rationale-Provenance Graph`
+- `Open-ended Work Graph`
+
+其中我更推荐：
+
+**Exploration Graph / 探索图谱**
+
+因为它天然允许：
+```
+死路
+剪枝
+回溯
+并行路线
+候选路线
+主线漂移
+局部成果复用
+```
+
+## 9. 最小结构可以这样定
+```
+Node:
+  - Goal        目标
+  - Question    问题
+  - Hypothesis  假设
+  - Option      路线 / 方案
+  - Attempt     尝试
+  - Evidence    证据 / 观察
+  - Decision    决策
+  - Artifact    产物
+  - Task        行动
+
+Edge:
+  - depends_on
+  - supports
+  - refutes
+  - tests
+  - produces
+  - selects
+  - rejects
+  - supersedes
+  - forks_from
+  - merges_into
+  - blocks
+
+State:
+  - seed
+  - candidate
+  - active
+  - competing
+  - blocked
+  - validated
+  - invalidated
+  - closed
+  - archived
+  - superseded
+```
+
+对于你说的长线小说和科研规划，最关键的边是：
+```
+supports / refutes / rejects / supersedes / forks_from / merges_into
+```
+
+而不是传统任务管理里的`depends_on`。
+
+## 10. 最关键判断
+
+**这个系统的价值不在于让项目看起来有结构，而在于让探索过程可恢复。**
+
+也就是说，当你隔了三周回来，系统应该能回答：
+```
+我现在主线是什么？
+我为什么走到这里？
+哪些路线已经死了？
+哪些路线只是暂时搁置？
+哪些证据支持当前判断？
+哪些假设还没验证？
+下一步最应该验证什么？
+如果当前主线失败，备选路径是什么？
+```
+
+如果能回答这些问题，它就是有效的。
+
+如果只是画出一个很复杂的漂亮网络，它会失败。</content>
+  </message>
+  <message role="user">
+    <content>你可以  MOCK 出来一个可能的效果。包含：
+
+1. 数据结构定义
+2. 一个可视化展示的效果，基于数据结构呈现的可视化，方便用户查看，可以用 HTML 格式绘制
+
+我看到 prototype 的结果之后再来大致判断是否是我想要的</content>
+  </message>
+  <message role="assistant">
+    <content>我会给一个可运行的静态 HTML 原型：内置 mock 数据、节点/边类型、状态颜色、当前指针、关闭节点、候选路径与竞争路线。数据结构先用 JSON/TypeScript 风格定义，方便后续迁移到数据库或 Markdown frontmatter。
+
+已 mock 一个静态 HTML 原型，内含：
+
+- **数据结构定义**：`Node / Edge / EventLog`，含节点类型、状态、边类型、关闭理由、当前指针。
+- **可视化展示**：SVG 图谱，支持点击节点查看详情，切换全图 / 当前前沿 / 假设证据决策 / 死节点 / 主线视图。
+- **样例场景**：用“科研规划 + 长线创作类比”混合 mock，展示候选路线、死节点、阻塞、证据、决策和主线指针。
+
+下载查看：
+
+exploration_graph_prototype.html
+
+核心模型简化如下：
+```
+type NodeType =
+  | &quot;Goal&quot; | &quot;Question&quot; | &quot;Hypothesis&quot; | &quot;Option&quot;
+  | &quot;Attempt&quot; | &quot;Evidence&quot; | &quot;Decision&quot; | &quot;Artifact&quot; | &quot;Task&quot; | &quot;Risk&quot;;
+
+type NodeState =
+  | &quot;seed&quot; | &quot;candidate&quot; | &quot;active&quot; | &quot;blocked&quot; | &quot;done&quot;
+  | &quot;validated&quot; | &quot;invalidated&quot; | &quot;closed&quot; | &quot;archived&quot; | &quot;superseded&quot;;
+
+type EdgeType =
+  | &quot;decomposes_to&quot; | &quot;depends_on&quot; | &quot;tests&quot; | &quot;supports&quot; | &quot;refutes&quot;
+  | &quot;produces&quot; | &quot;selects&quot; | &quot;rejects&quot; | &quot;supersedes&quot;
+  | &quot;forks_from&quot; | &quot;merges_into&quot; | &quot;blocks&quot;;
+```
+
+这个 prototype 的重点不是视觉精致，而是验证一个判断：**这种图是否能同时表达探索路线、负知识、当前前沿、关闭理由和主线收束。**</content>
+  </message>
+  <message role="user">
+    <content>1. 我担心你做的交互比较复杂，可能难以使用；我想象中的场景是，AGENT/USER 使用 json/yaml 等构建框架，然后某个 CLI 引擎自动渲染可视化效果 =&gt; 你需要打消我这方面的疑虑
+2. 这个图谱效果很漂亮，但是不一定好用；好用需要清晰，实用 =&gt; 你需要从实际使用的场景出发思考</content>
+  </message>
+  <message role="assistant">
+    <content>你的担心是对的。上一个 prototype 更像“证明图谱能表达什么”，不是“证明日常可用”。真正可用的形态应该是：
+
+**用户 / Agent 维护低复杂度 JSON/YAML；CLI 自动生成若干固定视图；用户主要读图，不在图上复杂交互。**
+
+换句话说，图谱系统应该是**view compiler**，不是一个复杂 GUI 编辑器。
+
+## 1. 正确使用模式：数据优先，视图自动生成
+
+推荐架构：
+```
+project.exgraph.yaml
+        ↓
+exgraph render
+        ↓
+dist/
+  overview.html          # 总览
+  frontier.html          # 当前前沿
+  dead-branches.html     # 死节点 / 关闭路线
+  rationale.html         # 假设-证据-决策
+  timeline.html          # 状态演化
+```
+
+用户不应该手工拖节点、连线、调布局。Agent 也不应该在 HTML 里改可视化。正确工作流是：
+```
+User / Agent 更新 YAML
+CLI 校验 schema
+CLI 自动布局
+CLI 生成 HTML / SVG / Markdown 摘要
+```
+
+这可以显著降低使用负担。
+
+## 2. 数据结构应该比可视化简单很多
+
+上一个 HTML 里 mock 的数据偏重展示。实际可维护版本应该更像这样：
+```
+nodes:
+  - id: thesis
+    type: goal
+    state: active
+    title: 形成可毕业的 CS 论文主线
+    cursor: mainline
+
+  - id: q-novelty
+    type: question
+    state: blocked
+    title: 检测器改进是否有足够 novelty
+    cursor: frontier
+
+  - id: h-event-coupling
+    type: hypothesis
+    state: active
+    title: 多事件耦合可改进微结构识别
+    confidence: 0.62
+
+  - id: h-hyperbolic
+    type: hypothesis
+    state: closed
+    title: 双曲图嵌入作为睡眠主线
+    close_reason:
+      why: 与当前数据和毕业约束耦合弱
+      reopen_if: 发现脑网络层级结构与事件检测强相关
+
+edges:
+  - from: thesis
+    to: q-novelty
+    type: decomposes_to
+
+  - from: q-novelty
+    to: h-event-coupling
+    type: tests
+
+  - from: h-hyperbolic
+    to: h-event-coupling
+    type: rejected_in_favor_of
+```
+
+重点是：**用户维护的是语义，不是视觉。**
+
+## 3. 交互复杂度应该被压到最低
+
+真正好用的版本不应该依赖大量点击、筛选、拖拽。交互最多保留三类：
+交互必要性点击节点看详情必要切换固定视图必要搜索节点标题 / 标签必要手动改布局不推荐拖拽连线不推荐图上编辑状态早期不推荐自定义复杂过滤器后期再说
+早期版本应该遵守：
+
+**编辑在 YAML；阅读在 HTML；分析由 CLI 生成。**
+
+这能避免工具变成另一个 Notion / Obsidian / Mermaid 的复杂替代品。
+
+## 4. “漂亮图”不等于“可用图”
+
+你说得对。复杂网络图很容易漂亮但不可读。对长线探索任务，真正有用的视图通常不是全图，而是**局部视图**。
+
+### 4.1 最重要视图不是全图，而是 Current Frontier
+
+用户每天真正需要的是：
+```
+现在主线是什么？
+当前开放前沿是什么？
+哪些节点 blocked？
+下一步该验证什么？
+```
+
+所以首页应该长这样：
+```
+Mainline:
+  thesis → q-story → h-event-coupling → next-pilot
+
+Current frontier:
+  [blocked] q-novelty: 需要文献判断创新性
+  [active] h-event-coupling: 等待 pilot 验证
+  [active] lit-review: 正在收集基线方法
+
+Next actions:
+  1. 找 5 篇 slow-wave / spindle / K-complex joint detection 文献
+  2. 跑一个 10-subject pilot
+  3. 写出 problem statement v0
+```
+
+这比一张大图有用。
+
+## 5. 可视化应该分成固定场景
+
+我建议不要做一个“万能图”。做 5 个固定视图。
+
+### View 1：Overview Map
+
+用途：恢复上下文。
+```
+Goal
+ ├─ Question A
+ │   ├─ Hypothesis A1
+ │   └─ Hypothesis A2 [closed]
+ └─ Question B
+     └─ Option B1 [active]
+```
+
+适合：隔几天回来，先看项目整体结构。
+
+### View 2：Frontier View
+
+用途：决定下一步做什么。
+```
+Current mainline:
+  G-001 → Q-003 → H-007 → T-011
+
+Blocked:
+  Q-004 blocked by E-002 missing
+
+Active:
+  H-007, A-009, T-011
+
+Candidate:
+  O-012, O-013
+```
+
+适合：日常推进。
+
+### View 3：Rationale View
+
+用途：解释为什么这么选。
+```
+Hypothesis H1
+  supported by E1, E2
+  weakened by E3
+  selected by D1
+
+Rejected option O2
+  rejected by D1
+  reason: novelty too weak
+```
+
+适合：写论文、写设定说明、和 Agent 恢复上下文。
+
+### View 4：Dead Branch View
+
+用途：保存负知识。
+```
+Closed:
+  H-Hyperbolic
+    reason: out of scope
+    reopen if: hierarchy evidence appears
+
+  Novel betrayal route
+    reason: destroys character arc
+    reusable: emotional confrontation scene
+```
+
+适合：避免重复走旧路。
+
+### View 5：Timeline / Event Log
+
+用途：理解状态变化。
+```
+2026-06-01  created H1
+2026-06-03  E2 refuted H1
+2026-06-05  H1 closed
+2026-06-06  H3 selected as mainline
+```
+
+适合：回顾“我是怎么走到这里的”。
+
+## 6. CLI 不需要复杂
+
+一个现实可用的 CLI 可以很小：
+```
+exgraph init
+exgraph validate project.yaml
+exgraph render project.yaml --view overview
+exgraph render project.yaml --view frontier
+exgraph render project.yaml --all
+exgraph summary project.yaml
+```
+
+进一步：
+```
+exgraph lint project.yaml
+```
+
+检查：
+```
+- active 节点没有 incoming rationale
+- closed 节点没有 close_reason
+- blocked 节点没有 blocks / depends_on 来源
+- mainline cursor 超过 1 个
+- frontier 节点过多
+- related 边过多
+```
+
+真正有价值的是`lint`，因为它能防止图谱退化成垃圾网。
+
+## 7. 核心可用性原则
+
+### 原则 1：限制自由度
+
+不要允许用户随意创建 30 种节点、50 种边。早期限制为：
+```
+NodeType: goal / question / hypothesis / option / attempt / evidence / decision / task / artifact
+
+EdgeType: decomposes_to / depends_on / tests / supports / refutes / produces / selects / rejects / supersedes / blocks
+```
+
+如果某个关系表达不出来，再加。不要一开始追求完备 ontology。
+
+### 原则 2：全图只是索引，不是工作界面
+
+全图用于“我大概在哪里”。日常工作靠：
+```
+frontier
+blocked
+dead branches
+rationale
+next actions
+```
+
+否则图会越做越大，最后失去阅读价值。
+
+### 原则 3：每个节点必须回答一个问题
+
+节点不是随手记事。每个节点最好能回答：
+```
+它是什么？
+现在状态是什么？
+它为什么存在？
+它支持 / 反驳 / 依赖 / 阻塞什么？
+下一步是否需要动作？
+```
+
+如果一个节点没有边，也没有状态变化价值，它应该留在普通笔记，不进入图谱。
+
+### 原则 4：死节点必须结构化
+
+死节点不是垃圾桶。它至少需要：
+```
+close_reason:
+  why: 为什么关闭
+  evidence: 哪些证据导致关闭
+  reusable: 哪些部分可复用
+  reopen_if: 什么条件下重开
+```
+
+这对小说创作尤其重要：一个废弃桥段可能不能进入主线，但其中的对话、冲突、人物动作可以复用。
+
+### 原则 5：Agent 负责维护图谱，用户负责判断图谱
+
+理想分工：
+角色工作User判断路线、确认状态、决定关闭 / 重开Agent抽取节点、补边、更新 YAML、生成 summaryCLI校验、布局、渲染、生成视图
+这样用户不会被迫维护复杂结构。
+
+## 8. 实际场景：科研规划
+
+一次对话后，Agent 不应该只给一段总结，而应该更新图谱：
+```
+- id: h-slow-wave
+  type: option
+  state: candidate
+  title: 慢波检测作为独立技术章节
+  confidence: 0.55
+  risks:
+    - novelty may be weak
+    - baseline comparison required
+
+- id: e-existing-labels
+  type: evidence
+  state: done
+  title: 已有 spindle / K-complex 标注
+```
+
+CLI 渲染后，用户看到的不是“所有讨论内容”，而是：
+```
+当前主线：
+  多事件微结构协同分析
+
+当前前沿：
+  1. novelty 是否足够
+  2. 数据是否支持慢波检测
+  3. 长程模式如何与事件结合
+
+关闭路线：
+  双曲嵌入主线：暂时关闭，因跨度大
+```
+
+这就是实用。
+
+## 9. 实际场景：长线小说创作
+
+假设有三条竞争路径：
+```
+nodes:
+  - id: o-betrayal
+    type: option
+    state: closed
+    title: 女主早期背叛主角
+    close_reason:
+      why: 破坏后续人物信任弧线
+      reusable: 背叛误会场景可以改成第三方栽赃
+      reopen_if: 故事改为黑暗路线
+
+  - id: o-false-accusation
+    type: option
+    state: active
+    title: 第三方栽赃导致信任危机
+
+edges:
+  - from: o-betrayal
+    to: o-false-accusation
+    type: supersedes
+```
+
+渲染出来时，不需要复杂大图，只需要告诉作者：
+```
+当前采用：
+  第三方栽赃
+
+已关闭：
+  女主背叛路线
+  原因：破坏人物弧线
+  可复用：冲突强度、对峙场景、误会后的修复段落
+```
+
+这比“画一张人物关系大网”更有价值。
+
+## 10. 我会怎么修正 prototype 方向
+
+上一个 prototype 可以保留为“能力展示版”。真正的下一版应该变成：
+```
+exploration-graph/
+  project.yaml
+  schema.json
+  render.html
+  dist/
+    overview.html
+    frontier.html
+    rationale.html
+    dead.html
+```
+
+视觉上也要降复杂度：
+上一版下一版大型交互图多个固定视图点击筛选较多默认展示关键摘要强调漂亮网络强调主线、前沿、死节点节点位置写死自动布局HTML 内嵌数据YAML 作为唯一数据源图为主体图 + 表 + 摘要共同组成
+更好的首页布局应该是：
+```
+┌────────────────────────────┐
+│ Current Mainline            │
+│ G → Q → H → D → T           │
+├────────────────────────────┤
+│ Frontier                    │
+│ - blocked: novelty          │
+│ - active: pilot             │
+│ - candidate: multimodal     │
+├────────────────────────────┤
+│ Dead Branches               │
+│ - hyperbolic route closed   │
+├────────────────────────────┤
+│ Small Graph                 │
+│ 只显示主线 + 当前前沿        │
+└────────────────────────────┘
+```
+
+## 11. 最终判断
+
+你的方向应该收束为：
+
+**声明式探索图谱：用 YAML/JSON 保存探索状态，由 CLI 自动生成少数高价值视图。**
+
+不要做成：
+```
+复杂可交互图编辑器
+```
+
+应该做成：
+```
+structured notes + graph compiler + project recovery views
+```
+
+判断一个版本是否好用，只看它能不能稳定回答 6 个问题：
+```
+1. 当前主线是什么？
+2. 当前前沿是什么？
+3. 什么被阻塞，为什么？
+4. 哪些路线已经关闭，为什么？
+5. 当前判断由哪些证据支持 / 反驳？
+6. 下一步最小动作是什么？
+```
+
+如果它能回答这些问题，即使图不漂亮，也有用。如果它回答不了这些问题，图再漂亮也只是装饰。</content>
+  </message>
+  <message role="user">
+    <content>不要陷入具体的任务，被锚定了思维反而丢失了在我们期待框架下的泛用性
+
+下面请你重新思考，给出至少三个完全不同门类的 Prototype 给我</content>
+  </message>
+  <message role="assistant">
+    <content>这次我会把“任务图谱”抽象成不同的**graph archetype**，不是围绕某个具体项目展开。产物会做成一个 prototype gallery：同一渲染引擎、不同领域数据模型和视图逻辑。
+
+我重新做了一个**Prototype Gallery**，避免被具体科研任务锚定。它包含 4 个不同门类，每个门类使用同一套“声明式数据 → 自动渲染视图”的思路，但节点/边语义不同。
+
+下载查看：
+
+exploration_graph_prototype_gallery.html
+
+## 4 个 Prototype
+
+### 1. 科研探索图谱
+
+**Archetype：Hypothesis–Evidence–Decision Graph**
+
+核心问题：
+```
+问题 / 假设 / 证据 / 实验 / 决策 / 产物
+```
+
+适合：
+
+- 论文选题
+- 科研路线规划
+- 实验路线剪枝
+- 文献证据管理
+
+重点验证：
+
+一个假设如何被证据支持、削弱、验证、关闭或转化成决策。
+
+### 2. 长篇小说创作图谱
+
+**Archetype：Narrative Constraint Graph**
+
+核心问题：
+```
+主题 / 人物弧线 / 场景 / 伏笔 / 废弃桥段 / 草稿
+```
+
+适合：
+
+- 长篇小说
+- 剧本
+- 世界观设定
+- 多路线情节规划
+
+重点验证：
+
+废弃设定不是垃圾，而是带有关闭理由和可复用素材的 negative knowledge。
+
+### 3. 产品发现图谱
+
+**Archetype：Opportunity–Assumption–Experiment Graph**
+
+核心问题：
+```
+用户群体 / 痛点 / 机会 / 假设 / 实验 / 洞察 / 功能 / roadmap 决策
+```
+
+适合：
+
+- 产品探索
+- 创业验证
+- 用户研究
+- MVP 收束
+
+重点验证：
+
+产品路线不是 feature list，而是假设被实验验证后形成的机会筛选过程。
+
+### 4. 工程迁移图谱
+
+**Archetype：Architecture Migration Graph**
+
+核心问题：
+```
+系统 / 约束 / 风险 / 方案 / 迁移步骤 / 测试 / ADR / 灰度
+```
+
+适合：
+
+- 系统重构
+- 架构迁移
+- 技术债治理
+- 平台演进
+
+重点验证：
+
+工程迁移里最重要的不是“任务完成”，而是风险、回滚条件、约束和 ADR 的关系。
+
+## 这版 prototype 的设计意图
+
+它刻意弱化复杂交互，只保留：
+```
+1. 切换门类
+2. 点击节点看详情
+3. 查看当前前沿
+4. 查看声明式 YAML-like 数据源
+```
+
+也就是验证这个工作流：
+```
+User / Agent 维护 YAML / JSON
+        ↓
+CLI 校验 schema
+        ↓
+CLI 自动布局
+        ↓
+生成 overview / frontier / rationale / dead-branches 等视图
+```
+
+不是做图编辑器。
+
+## 我认为下一步要判断的不是“图好不好看”
+
+应该判断这 4 个门类是否都能回答同一组恢复问题：
+```
+1. 当前主线是什么？
+2. 当前开放前沿是什么？
+3. 哪些路径已经关闭，为什么？
+4. 当前判断由哪些关系支撑？
+5. 哪些节点只是候选、阻塞或暂存？
+6. 如果隔几周回来，能否快速恢复上下文？
+```
+
+如果这 4 类都能成立，说明这个框架有泛用性。如果只有科研或小说成立，说明它更像领域工具，不是通用探索图谱框架。</content>
+  </message>
+  <message role="user">
+    <content>User included image: 图片(37).png - https://chatgpt.com/backend-api/estuary/content?id=file_0000000049cc71fdb79f770ee293f51a&amp;ts=494772&amp;p=fs&amp;cid=1&amp;sig=f3116211cc00cffdabd73c1d00e9cb4d9488800e49945ea0336e5beea2bc4d02&amp;v=0
+
+我对这个图的布局方式不满意，太过僵硬呆板，而且关联结构非常不直观;为什么要把图塞入网格布局中而不是按照图自身的结构布局呢？（可以引入第三方依赖）
+
+不同门类的 NODE/EDGE 完全可以用颜色或者标注区分并增加 filter 来优化可视化交互
+
+跳开刚刚的技术债，完全重构方案</content>
+  </message>
+  <message role="assistant">
+    <content>Thought for 9s
+
+你的批评是对的。**上一版布局思路是错的。**
+
+问题不在“丑”，而在**结构表达错位**：
+
+- 它把**node 类型**当成主组织轴，所以强行塞进横向分层网格；
+- 但用户真正想看的是**因果/依赖/竞争/收束结构**；
+- 结果变成：类型清楚了，**关系反而更难读**。
+
+所以应该**完全重构**，核心改成：
+
+**图先按“结构关系”布局；类型只是视觉属性和过滤维度，不再主导空间布局。**
+
+# 1. 重构后的总原则
+
+## 1.1 不再用“类型分泳道”作为默认布局
+
+旧思路：
+```
+Problem 一行
+Hypothesis 一行
+Evidence 一行
+Decision 一行
+```
+
+这会导致：
+
+- 关系线很长；
+- 回边、竞争边、替代边非常绕；
+- 同一局部子图被拆散；
+- 用户视线不停跨行跳转。
+
+新思路：
+
+**优先让“局部强关联节点”靠近，让“主路径”自然成形。**
+
+也就是：
+
+- 布局由`graph topology`决定；
+- 类型只用颜色 / 形状 / 标签 / filter 表达；
+- 需要时才叠加弱泳道、cluster 或背景分组，而不是先分行再塞图。
+
+## 1.2 同一份数据，允许多种布局视图
+
+不是“一张万能大图”，而是：
+```
+同一 graph data
+    ↓
+不同 projection / layout
+```
+
+最少应该支持：
+
+- **Flow View**：看主路径、依赖、收束
+- **Cluster View**：看局部簇、竞争路线、并行分支
+- **Focus View**：看某个节点的局部邻域
+- **Timeline View**：看演化顺序，而不是拓扑关系
+
+## 1.3 类型靠视觉编码，不靠空间编码
+
+类型区分方式应该是：
+
+- **颜色**：node type / edge type
+- **形状**：不同门类节点
+- **边样式**：supports / blocks / supersedes / refutes
+- **filter**：只看某些 type / state / tag
+- **legend + hover + click**：快速解释
+
+而不是靠“全部 Problem 放左上、Evidence 放中下”这种僵硬方式。
+
+# 2. 完整重构后的技术方案
+
+## 2.1 数据层：仍然声明式
+
+这个方向不变。仍然是：
+```
+YAML / JSON 维护语义
+CLI 负责编译视图
+```
+
+但要把“布局信息”从手写绝对坐标中拿掉。
+
+### 核心数据结构
+```
+graph:
+  id: demo
+  title: Example Exploration Graph
+
+nodes:
+  - id: n1
+    type: hypothesis
+    state: active
+    title: 假设 A
+    tags: [mainline]
+    score:
+      confidence: 0.68
+      priority: high
+
+  - id: n2
+    type: evidence
+    state: done
+    title: 证据 E1
+
+edges:
+  - from: n2
+    to: n1
+    type: supports
+    weight: 0.9
+
+views:
+  default: flow
+```
+
+关键点：
+
+- **不手写 x/y**
+- 可选写`group`、`cluster`、`time`、`rank_hint`
+- 布局交给引擎
+
+## 2.2 渲染层：基于专业图形库，而不是手写 SVG 定位
+
+你说可以引入第三方依赖，这很好。我建议直接放弃手写布局，改成成熟图引擎。
+
+### 推荐组合
+方案 A：Cytoscape.js + dagre / cose-bilkent / fcose
+适合：
+
+- 浏览器渲染
+- 交互较成熟
+- filter / styling / 局部 focus 容易做
+
+优点：
+
+- 很适合做 graph app
+- 支持多种自动布局
+- 节点/边样式可编程
+- 能做 neighborhood/highlight/filter
+方案 B：ELK.js
+适合：
+
+- 有明确方向性的图
+- 想要更好的 layered / orthogonal 布局
+- 依赖/流程/编排图
+
+优点：
+
+- 比简单 dagre 更强
+- 可以做 hierarchical graph
+- 对 edge routing 更专业
+方案 C：Sigma.js / Graphology
+适合：
+
+- 更偏“知识图谱 / 大图探索”
+- 力导布局、社区结构、局部浏览
+方案 D：D3 + 自定义投影
+适合：
+
+- 特殊视图，比如 timeline / radial / sankey-like view
+- 但不建议拿它单独承担主图布局
+
+# 3. 新的可视化原则
+
+## 3.1 默认不是“全图”，而是“可恢复视图”
+
+首页默认应该是：
+
+- 当前主线高亮
+- frontier 高亮
+- dead branches 可折叠
+- 其他节点淡化
+- 当前 focus node 的 1-hop / 2-hop 邻域高亮
+
+这样不会一上来被大图淹没。
+
+## 3.2 需要内置 filter，而不是只靠颜色
+
+最基础的 filter：
+
+### 按节点过滤
+
+- type
+- state
+- tag
+- group
+- active frontier only
+- mainline only
+- closed only
+
+### 按边过滤
+
+- depends_on
+- supports
+- refutes
+- blocks
+- supersedes
+- produces
+- relates_to
+
+### 按结构过滤
+
+- 只看某节点邻域
+- 只看最短路径
+- 只看主连通分量
+- 只看当前 cursor 可达子图
+
+## 3.3 需要路径高亮，而不是只显示边
+
+例如点一个节点时，应该能一键显示：
+
+- **upstream rationale**：它为什么成立
+- **downstream consequence**：它影响什么
+- **competing alternatives**：有哪些竞争路径
+- **closed siblings**：同类已关闭路线
+
+这个比单纯 hover 显示信息更重要。
+
+# 4. 至少三个完全不同门类的 Prototype（重构版）
+
+下面不是“换个示例数据”，而是**换可视化范式**。
+
+## Prototype A：Flow Graph
+
+### 适用门类
+
+- 科研规划
+- 决策分析
+- 产品探索
+- 工程迁移
+
+### 目标
+
+表达：
+```
+问题 → 假设 / 选项 → 尝试 / 证据 → 决策 → 下一步
+```
+
+### 布局
+
+- **主布局**：layered DAG layout
+- 推荐：`ELK.js`或`dagre`
+- 主路径从左到右
+- 竞争路线自然分叉
+- 回边 / refute / supersede 用弯曲边
+
+### 视觉编码
+
+- node type：颜色 + 图标
+- node state：边框 / 透明度 / 顶条
+- edge type：颜色 + 虚线 / 实线 / 箭头
+
+### 交互
+
+- filter by type/state
+- highlight mainline
+- click node =&gt; show upstream/downstream path
+- toggle closed branches
+
+### 为什么好用
+
+因为它优先表达“怎么走到这里”。
+
+## Prototype B：Cluster / Constellation Graph
+
+### 适用门类
+
+- 长篇小说创作
+- 世界观设定
+- 复杂概念网络
+- 研究议题地图
+
+### 目标
+
+表达：
+```
+多个相互牵制的局部团簇
+角色、设定、桥段、主题、伏笔、废案之间的关系
+```
+
+### 布局
+
+- **主布局**：force-directed + community clustering
+- 推荐：`Cytoscape fcose`/`Sigma.js`
+- 让强连接节点自然聚团
+- 用 hull / cluster background 标记群组
+
+### 视觉编码
+
+- 群组：淡背景包围
+- 节点类型：颜色 / 形状
+- dead node：灰化 + 可显示“closed reason”
+- competing branch：同色系不同边框
+
+### 交互
+
+- expand/collapse cluster
+- filter by tag/group
+- show ego network
+- show only one storyline / one character / one theme
+
+### 为什么好用
+
+因为小说/创作并不是单一路径 DAG，而更像**簇状约束网络**。
+
+## Prototype C：State Space / Frontier Graph
+
+### 适用门类
+
+- 开放式探索项目
+- 多方案并行试探
+- Agent 任务编排
+- 创意生成与剪枝
+
+### 目标
+
+表达：
+```
+当前前沿在哪里？
+哪些节点是候选？
+哪些已经死亡？
+哪些只是暂存？
+```
+
+### 布局
+
+- **主布局**：radial / concentric
+- 中心：current cursor / active mainline
+- 第一圈：frontier
+- 第二圈：candidate / parking
+- 外圈：closed / archived / dead
+
+推荐：
+
+- `Cytoscape concentric`
+- 或 D3 radial layout
+
+### 视觉编码
+
+- 距中心远近表达“当前相关性”
+- 状态比类型更重要
+- dead branch 默认折叠在外圈
+
+### 交互
+
+- 只看 frontier
+- 展开某个 closed branch 的关闭理由
+- 查看“如果当前主线失败，可以回退到哪些节点”
+
+### 为什么好用
+
+因为这个视图不是解释结构，而是解释**工作记忆优先级**。
+
+## Prototype D（可选）：Timeline / Event Graph
+
+### 适用门类
+
+- 迭代记录
+- 决策历史
+- 实验演化
+- 写作版本路径
+
+### 目标
+
+表达：
+```
+项目是如何演化到当前状态的
+```
+
+### 布局
+
+- 时间轴为主
+- 事件节点串联
+- 同时可点开某一事件关联的 graph subview
+
+### 为什么需要它
+
+因为“拓扑关系”不能替代“时间演化”。
+
+# 5. 新方案的“图自身结构布局”怎么实现
+
+你问得很关键：
+
+为什么不按图自身结构布局？
+
+正确答案是：
+
+**应该按结构布局，但不是只有一种结构。**
+
+不同任务图的“结构”不一样，所以布局引擎应该是**可切换策略**，而不是固定网格。
+
+## 5.1 布局策略选择器
+
+CLI / renderer 应该支持：
+```
+render:
+  layout:
+    mode: flow   # flow | cluster | frontier | timeline
+```
+
+### flow
+
+- layered
+- 适合 DAG / decision / dependency
+
+### cluster
+
+- force + clustering
+- 适合世界观 / 创意网络 /议题图谱
+
+### frontier
+
+- concentric / radial
+- 适合状态空间和当前工作焦点
+
+### timeline
+
+- chronological
+- 适合演化记录
+
+## 5.2 同一图多视图，而不是多份数据
+
+同一份数据可以生成：
+```
+demo.flow.html
+demo.cluster.html
+demo.frontier.html
+demo.timeline.html
+```
+
+这比“把所有需求塞进一个图”更合理。
+
+# 6. 新交互设计
+
+## 6.1 主界面结构
+
+我建议界面改成三栏或双栏：
+
+### 左侧：Filter &amp; View Controls
+
+- layout mode
+- node type
+- edge type
+- state
+- tag
+- search
+
+### 中间：Graph Canvas
+
+- 自适应布局
+- 缩放 / 平移
+- 框选 / 点击
+
+### 右侧：Context Panel
+
+- node detail
+- upstream/downstream
+- close reason
+- event history
+- linked artifacts
+
+## 6.2 核心交互动作
+
+只保留高价值动作：
+
+- **切换布局视图**
+- **filter**
+- **点节点看局部**
+- **高亮路径**
+- **展开/折叠 dead branches**
+- **搜索**
+
+不要做复杂拖拽编辑器。
+
+# 7. 一个真正可用的 CLI 结构
+```
+exgraph validate project.yaml
+exgraph render project.yaml --layout flow
+exgraph render project.yaml --layout cluster
+exgraph render project.yaml --layout frontier
+exgraph render project.yaml --layout timeline
+exgraph render project.yaml --all
+```
+
+再加：
+```
+exgraph lint project.yaml
+```
+
+检查：
+
+- 孤立节点
+- 无关闭理由的 closed 节点
+- 无任何支撑的 decision
+- 过大的 frontier
+- 未挂接到主线的 active 节点
+- 仅有`related_to`的弱语义边过多
+
+# 8. 我建议的彻底重构结论
+
+## 原方案，应该丢掉的部分
+
+- 手工绝对坐标布局
+- 按类型强制分行
+- 大一统单视图思路
+- 把“图的空间布局”当成数据的一部分
+- 漂亮但弱结构的 SVG 原型思路
+
+## 新方案，应当保留的部分
+
+- 声明式 YAML / JSON
+- typed nodes / typed edges
+- closed reason / reopen condition
+- mainline / frontier / parking / dead branch 这些状态语义
+- CLI 编译到静态 HTML 的思路
+
+## 新方案，应当新增的部分
+
+- 多布局模式
+- 专业图布局引擎
+- filter + focus + path highlight
+- 一图多视图
+- cluster / frontier / timeline 这些非 DAG 视图
+
+# 9. 最终建议：下一版该做什么
+
+我建议下一版不要再做“样例画廊”。而是直接做一个**真正的 v2 prototype**，目标很明确：
+
+## v2 prototype 范围
+
+- 用一份统一 schema
+- 同一数据生成 3 个视图：
+
+  - `flow`
+  - `cluster`
+  - `frontier`
+- 使用`Cytoscape.js`+ 布局插件 或`ELK.js`
+- 加上：
+
+  - node type filter
+  - state filter
+  - edge type filter
+  - click node → highlight neighborhood
+  - toggle closed branches
+
+这样你就能真正比较：
+
+**同一份 graph data，在不同布局哲学下，哪一种最适合“恢复上下文、理解关系、支持下一步判断”。**
+
+如果你愿意，我下一步可以直接给你做一个**完全重构后的 v2 HTML prototype**，只做一件事：
+
+**同一份数据，三个布局视图切换：flow / cluster / frontier。**
+
+这样你能直接看出：新的“结构驱动布局”是否比之前的“网格分层布局”更符合你的直觉。</content>
+  </message>
+  <message role="user">
+    <content>好的，请开始做；我先不要求你做复杂的渲染逻辑，只要先做大致的 prototype 即可，降低工作压力</content>
+  </message>
+  <message role="assistant">
+    <content>这版我会做成**v2 结构驱动布局原型**：同一份 JSON 数据，切换`flow / cluster / frontier`三种布局；只保留必要交互，先验证方向，不追求工程完备性。
+
+已完成 v2 prototype：
+
+exploration_graph_v2_prototype.html
+
+这版刻意降低复杂度，重点验证新的方向：
+
+- **同一份数据，三种布局**：`Flow / Cluster / Frontier`
+- **不再按节点类型塞进泳道网格**
+- **节点类型用颜色表达**
+- **节点状态用顶部状态条表达**
+- **支持 filter**：节点类型、状态、边类型、搜索、隐藏 closed
+- **支持 focus**：点击节点高亮 1-hop 邻域
+- **右侧面板显示**：incoming rationale / outgoing consequence
+
+这版没有引入第三方依赖，原因是先把交互模型和布局哲学验证清楚。后续如果这个方向成立，再替换为：
+```
+Cytoscape.js + fcose / cose-bilkent
+或
+ELK.js
+```
+
+当前版本的目标是判断：
+
+结构驱动布局 + 多视图切换，是否比之前的类型泳道图更适合表达探索图谱。</content>
+  </message>
+  <message role="user">
+    <content>User included image: 图片(38).png - https://chatgpt.com/backend-api/estuary/content?id=file_0000000048f471fd874775da9b18c669&amp;ts=494772&amp;p=fs&amp;cid=1&amp;sig=24cc902576c3bafb90774d7644c909fb6344e404d6ee4d3d37cbdbcf555fceaf&amp;v=0
+
+思路对了，不过布局稍微差了一点点，不过这是技术问题，应该 OK
+
+下面我们讨论技术实现环节，如果我想要封装成一个可以给 AGENT 使用的东西，应该把目标定成什么形态？
+
+[一些混乱思考] {
+
+- 可以考虑做成一个有依赖的项目
+- 可以考虑封装 SKILL暴露给 AGENT 用
+- ...
+}
+
+建议：请你深入思考给出基本的想法，然后利用苏格拉底提问反向采访我，然后我们确认到底做什么形态、 用什么技术路线</content>
+  </message>
+  <message role="assistant">
+    <content>## 初步结论
+
+目标形态不应该是“一个 SKILL”，也不应该只是“一个可视化网页”。更合理的目标是：
+
+**一个 Agent-operable Exploration Graph Kit：声明式图谱数据格式 + CLI 编译器 + 静态 HTML 视图 + Agent 使用规约。**
+
+也就是四层：
+```
+1. Schema / Spec        定义图谱数据格式
+2. CLI Engine           校验、lint、布局、渲染、摘要
+3. Static Viewer        输出 HTML / SVG / Markdown
+4. Agent Skill / Rule   指导 Agent 何时更新图谱、如何更新、何时询问用户
+```
+
+SKILL 只负责“让 Agent 正确使用工具”；CLI 负责“让结果可验证、可渲染、可重复”；Schema 负责“让不同 Agent / 不同项目之间可迁移”。
+
+# 1. 目标不要定成“图谱编辑器”
+
+我建议先排除一个方向：
+
+不做复杂 GUI，不做图上拖拽编辑，不做 Notion/Obsidian 式知识库替代品。
+
+原因：
+
+- 图上编辑很快会变成产品级复杂度；
+- Agent 更适合编辑结构化文本，不适合稳定操作 GUI；
+- 用户真正需要的是**恢复上下文、理解状态、判断下一步**，不是手工摆图；
+- 图布局应由引擎计算，不应成为用户维护成本。
+
+所以核心工作流应当是：
+```
+User / Agent 修改 exgraph.yaml
+        ↓
+exgraph validate
+        ↓
+exgraph lint
+        ↓
+exgraph render --all
+        ↓
+dist/
+  frontier.html
+  flow.html
+  cluster.html
+  rationale.html
+  dead.html
+  summary.md
+```
+
+# 2. 推荐目标形态
+
+## 2.1 项目形态
+
+可以做成一个独立项目，例如：
+```
+exgraph/
+  packages/
+    core/          # schema, parser, lint, graph model
+    cli/           # exgraph command
+    renderer/      # HTML renderer templates
+    skill/         # Agent-facing SKILL.md
+  examples/
+    research/
+    fiction/
+    product/
+    engineering/
+  schema/
+    exgraph.schema.json
+```
+
+但 v0 不需要 monorepo。最小形态可以是：
+```
+exgraph/
+  src/
+    cli.ts
+    schema.ts
+    lint.ts
+    layout.ts
+    render.ts
+    summary.ts
+  templates/
+    viewer.html
+  examples/
+    demo.yaml
+  skill/
+    SKILL.md
+```
+
+## 2.2 Agent 使用形态
+
+Agent 不应该“凭感觉画图”。Agent 应该被约束为只做几类动作：
+```
+1. propose_node
+2. update_node_state
+3. add_edge
+4. close_branch
+5. mark_frontier
+6. render_views
+7. summarize_frontier
+```
+
+对应到 CLI，不一定真的做交互式命令，早期可以只是：
+```
+exgraph validate graph.yaml
+exgraph lint graph.yaml
+exgraph render graph.yaml --all
+exgraph summary graph.yaml
+```
+
+Agent 修改 YAML 后运行这些命令，拿到 lint 反馈再修正。
+
+# 3. 技术路线建议
+
+## 3.1 首选：TypeScript / Node.js
+
+理由很实际：
+
+- 前端图可视化生态强；
+- `Cytoscape.js`、`elkjs`、`dagre`、`d3`都是 JS/TS 生态；
+- CLI、schema 校验、HTML 生成可以同语言完成；
+- 输出静态 HTML 容易跨平台；
+- 给 Agent 调用也简单：`npx exgraph render graph.yaml --all`。
+
+推荐技术栈：
+```
+Language: TypeScript
+CLI: commander / cac
+Schema validation: zod 或 ajv + JSON Schema
+YAML: yaml
+Graph layout:
+  - ELK.js: flow / layered layout
+  - Cytoscape.js + fcose: cluster / force layout
+  - custom small layout: frontier / radial
+Rendering:
+  - static HTML template
+  - embedded JSON data
+  - Cytoscape.js runtime
+Testing:
+  - vitest
+Packaging:
+  - npm package
+```
+
+## 3.2 为什么不首选 Python
+
+Python 当然可以做 CLI 和数据处理，但浏览器图谱交互最终还是要回到 JS。除非你的主要目标是科研 notebook / Graphviz 静态图，否则 Python 会在交互可视化层多绕一步。
+
+Python 适合：
+```
+- 数据分析
+- Graphviz / NetworkX 静态图
+- 与科研 pipeline 集成
+```
+
+但这个项目明显更像：
+```
+declarative graph → interactive static viewer
+```
+
+所以 TypeScript 更自然。
+
+## 3.3 第三方布局库选择
+
+我建议：
+视图首选`flow`ELK.js`cluster`Cytoscape.js + fcose`frontier`自定义 radial/concentric 或 Cytoscape concentric`timeline`自定义 D3 / HTML timeline
+具体判断：
+
+- **ELK.js**：适合有方向、有依赖、有层级的图；
+- **Cytoscape.js**：适合交互、filter、focus、样式、局部网络；
+- **Graphviz**：适合静态 SVG，但浏览器交互弱；
+- **D3**：灵活，但自己承担太多布局和交互细节。
+
+所以 v1 可以用：
+```
+Cytoscape.js + elkjs
+```
+
+Cytoscape 管交互和渲染；ELK 管 flow layout；Cytoscape layout 管 cluster/frontier。
+
+# 4. 核心产品边界
+
+## v0：验证工具链
+
+目标：
+```
+一份 YAML → 校验 → 生成一个 HTML → 能切换三种布局
+```
+
+必须有：
+```
+- schema validation
+- node / edge type
+- state
+- cursor: mainline / frontier / parking
+- close_reason
+- render: flow / cluster / frontier
+- filter: type / state / edge
+- click focus
+```
+
+不要做：
+```
+- 图上编辑
+- 数据库
+- 多用户同步
+- Obsidian 插件
+- VSCode 插件
+- 自动抽取全量上下文
+```
+
+## v1：变成 Agent 工具
+
+目标：
+```
+Agent 可以稳定维护 graph.yaml，并用 CLI 生成视图和摘要。
+```
+
+新增：
+```
+exgraph lint
+exgraph summary
+exgraph diff
+exgraph query
+```
+
+其中`lint`最重要。
+
+### lint 规则示例
+```
+- closed 节点必须有 close_reason
+- blocked 节点必须有 blocker 或 incoming blocks edge
+- decision 节点必须有至少一个 incoming supports / refutes / selects
+- active frontier 不能超过 N 个
+- mainline cursor 不应断裂
+- edge type 不能用 related_to 逃避语义
+- orphan node 超过阈值时报警
+```
+
+这个会显著提升 Agent 使用质量。
+
+## v2：多领域 archetype
+
+目标：
+```
+同一 core schema，支持不同门类 overlay。
+```
+
+例如：
+```
+core:
+  goal / question / hypothesis / attempt / evidence / decision / artifact / risk
+
+fiction overlay:
+  premise / character / scene / arc / foreshadow / cut_material
+
+product overlay:
+  segment / opportunity / assumption / experiment / insight / feature
+
+engineering overlay:
+  component / constraint / option / migration_step / test / adr / rollout
+```
+
+但 overlay 不要太早做复杂。早期可以只允许用户在`type`上自定义，同时保留 core edge semantics。
+
+# 5. SKILL 应该怎么封装
+
+SKILL 不应该重复实现工具逻辑。它应该规定 Agent 的使用姿态。
+
+## SKILL 的职责
+```
+Use this skill when managing long-running exploratory work:
+- research planning
+- novel writing
+- product discovery
+- architecture migration
+- open-ended investigation
+```
+
+Agent 行为：
+```
+1. 判断是否需要更新 exploration graph
+2. 从对话中抽取 durable nodes / edges
+3. 不把短期闲聊写进图谱
+4. 对关闭、重开、主线切换等高影响操作先询问用户
+5. 更新 graph.yaml
+6. 运行 validate / lint / render
+7. 给用户 frontier summary，而不是 dump 全图
+```
+
+## SKILL 不应该做的事
+```
+- 不把所有想法都节点化
+- 不在没有用户确认时关闭主线
+- 不把推测写成 evidence
+- 不把 decision 和 hypothesis 混用
+- 不用 related_to 逃避关系判断
+```
+
+# 6. 我建议的最终架构
+```
+exgraph.yaml
+  ↓
+Parser
+  ↓
+Schema Validator
+  ↓
+Semantic Linter
+  ↓
+Graph Model
+  ↓
+Layout Projector
+    - flow
+    - cluster
+    - frontier
+    - timeline
+  ↓
+Renderer
+    - static HTML
+    - SVG
+    - Markdown summary
+  ↓
+Agent-facing output
+    - current mainline
+    - frontier
+    - blocked
+    - closed branches
+    - next actions
+```
+
+关键思想：
+
+数据模型稳定，视图可以换；Agent 修改数据，不修改视图。
+
+# 7. 最小可行命令设计
+```
+exgraph init
+exgraph validate graph.yaml
+exgraph lint graph.yaml
+exgraph render graph.yaml --view flow
+exgraph render graph.yaml --view cluster
+exgraph render graph.yaml --view frontier
+exgraph render graph.yaml --all
+exgraph summary graph.yaml
+```
+
+后续再加：
+```
+exgraph query graph.yaml --node h1 --upstream
+exgraph query graph.yaml --node h1 --downstream
+exgraph diff old.yaml new.yaml
+exgraph normalize graph.yaml
+```
+
+`normalize`可以做：
+```
+- 排序 nodes / edges
+- 补全 created_at / updated_at
+- 统一 id 格式
+- 清理重复边
+```
+
+这对 Agent 很有用，因为 Agent 经常会生成顺序混乱的 YAML。
+
+# 8. 关键设计选择
+
+## 选择 1：YAML 还是 JSON？
+
+推荐：
+```
+用户维护 YAML
+机器校验 JSON Schema
+内部处理 JSON
+```
+
+理由：
+
+- YAML 对人类和 Agent 都更易写；
+- JSON Schema 对工具链更标准；
+- 内部统一成 JSON graph model。
+
+## 选择 2：是否允许用户自定义类型？
+
+建议分阶段：
+```
+v0: 固定 core type
+v1: 允许 domain profile
+v2: 允许自定义 type，但必须映射到 core role
+```
+
+例如：
+```
+profiles:
+  fiction:
+    scene:
+      role: attempt
+    foreshadow:
+      role: evidence
+    cut_material:
+      role: artifact
+```
+
+这样不会让布局和 lint 崩掉。
+
+## 选择 3：布局是否写进数据？
+
+默认不写。
+
+允许少量 hint：
+```
+layout:
+  pin:
+    h1: { x: 300, y: 200 }
+  rank:
+    q1: 1
+    h1: 2
+  cluster:
+    h1: route-a
+```
+
+但不要让绝对坐标成为数据核心。
+
+## 选择 4：Agent 是否自动关闭节点？
+
+默认不能。
+
+高影响状态变更需要用户确认：
+```
+candidate → active    可自动建议，需确认
+active → closed       必须确认
+mainline switch       必须确认
+decision created      最好确认
+evidence created      必须有来源或上下文
+```
+
+# 9. 反向采访：需要你确认的关键问题
+
+下面这些问题决定项目形态，不是细节。
+
+## Q1. 你希望它主要服务谁？
+
+A. 你自己使用，辅助长期研究/写作B. 给任意 Agent 使用，作为通用工具C. 做成可发布的开源工具D. 集成进你自己的 Local Agent / Pi Agent
+
+这决定：工程质量、CLI 设计、文档、扩展性要做到什么程度。
+
+## Q2. Agent 的权限应该到哪里？
+
+A. Agent 只能提出 patch，用户手工确认B. Agent 可以直接改 YAML，但高风险操作确认C. Agent 可以自动维护图谱，用户只看 summaryD. Agent 只读图谱，不写图谱
+
+这个决定 SKILL 和 CLI 是否需要`diff / review / approve`机制。
+
+## Q3. 你更看重哪种输出？
+
+A. 静态 HTML，可打开查看B. Markdown summary，方便放进笔记系统C. SVG/PNG 图，方便嵌入文档D. JSON query result，方便 Agent 二次处理
+
+这决定 renderer 的优先级。
+
+## Q4. 图谱数据应该放在哪里？
+
+A. 单文件`graph.yaml`B. 一个目录，多文件拆分C. 每个项目一个`.exgraph/`目录D. 嵌入已有 Markdown frontmatter
+
+我倾向 v0 用单文件，v1 支持目录拆分。
+
+## Q5. 你能接受 Node.js / npm 项目吗？
+
+A. 可以，Node/TS 是合理路线B. 更希望 PythonC. 更希望 Rust 单二进制D. 无所谓，只要 Agent 能调用
+
+这会决定技术栈。就当前需求，我倾向 TypeScript。
+
+## Q6. 你希望它偏“轻工具”还是“平台核心”？
+
+A. 轻工具：渲染、校验、摘要即可B. 中工具：带 query、diff、lint、profileC. 平台核心：长期作为 Agent memory / project state backend
+
+我的建议是先做 B 的骨架，但只实现 A 的功能。
+
+## Q7. 是否需要领域 profile？
+
+A. 暂时不要，只做通用 core schemaB. 需要 research / fiction / product / engineering profilesC. 允许用户自定义 profileD. 先用 examples 表达，不正式进入 schema
+
+我建议 v0 只做 core schema + examples，避免 ontology 过早膨胀。
+
+## Q8. 你更怕哪种失败？
+
+A. 视觉不好看B. 图谱不好维护C. Agent 滥写、污染图谱D. 图太复杂，恢复上下文反而更慢E. 技术栈太重，难以复用
+
+这个问题最关键。它决定我们优先做 renderer、lint、Skill 还是数据模型。
+
+# 10. 我的默认建议
+
+在你回答前，我的默认路线是：
+```
+目标形态：
+  TypeScript CLI + static HTML renderer + Agent SKILL
+
+项目定位：
+  不是图谱编辑器
+  是 Agent 可操作的探索状态编译器
+
+v0 范围：
+  - graph.yaml
+  - schema validation
+  - semantic lint
+  - render flow / cluster / frontier
+  - summary.md
+  - examples
+  - SKILL.md
+
+技术：
+  TypeScript
+  YAML + Zod/JSON Schema
+  Cytoscape.js
+  ELK.js
+  静态 HTML 输出
+```
+
+一句话：
+
+**先做一个能被 Agent 稳定调用的 exgraph CLI，再写一个 SKILL 约束 Agent 如何维护图谱。**</content>
+  </message>
+  <message role="user">
+    <content>[选择] {
+
+	1. 使用 yaml
+	2. 提供尽量 KISS 的基础模型结构，支持 AGENT 做自己需要的 domain specify 扩展 ; 而非在类型系统上做过于复杂的花样
+	3. 不写布局配置；但是可以声明布局约束；不写 xy 坐标底层信息，但是对图谱布局层面的顶层可以指定
+	4. 不存在这种问题；我们的设计应该类似 React 那样 View =  render(yaml file) 只要更改 yaml file 其他都委托给 engine 
+}
+
+[采访回复] {
+	1. 配合 AGENT 使用；自己用
+	2. AGENT 写 yaml，一切编写入口只需要 yaml；engine 提供规则和渲染
+	3. serve 一个 yaml ，打开链接 User 查看
+		基本ux ： User/AGENT 更改 yaml -&gt; 渲染查看 | 目标：方便用户理解当前状态并管理工作流进展
+	4.  A OR B；看需求
+	5. 可以, 接受; 如果用 node =&gt; pnpm + typescript; 如果需要可视化，允许采用框架，轻量级：alpine.js，重量: 优先 svelte/solidjs/vue ; | =&gt; 具体方案自行决策
+	6. 轻工具，保持 YAGNI/KISS 的设计原则
+	7. 不要，保持通用性和领域无关
+	8. A + B + 复杂度过高，为了实现抽象引入的而复杂度反而超过了对问题本身的解决
+}</content>
+  </message>
+  <message role="assistant">
+    <content>你的选择把目标压清楚了：**做轻工具，不做平台；YAML 是唯一写入口；Engine 只负责 check + render + serve。**
+
+我会把目标定为：
+
+**exgraph：一个面向 Agent 的 YAML-to-View 探索图谱渲染器。**`View = render(graph.yaml)`；用户/Agent 只改 YAML，Engine 自动校验、布局、渲染、serve。
+
+# 1. 产品边界：它是什么 / 不是什么
+
+## 是什么
+```
+exgraph = YAML schema + check engine + layout renderer + local serve
+```
+
+核心 UX：
+```
+User / Agent 修改 graph.yaml
+        ↓
+exgraph serve graph.yaml
+        ↓
+浏览器自动刷新
+        ↓
+User 查看主线、前沿、阻塞、死节点、关系结构
+```
+
+## 不是什么
+
+明确不做：
+```
+- 图上编辑器
+- 数据库
+- 多用户协作
+- Obsidian / Notion 替代品
+- 复杂 ontology 系统
+- 手写 x/y 坐标布局
+- 重型 workflow 平台
+```
+
+这点很关键：**它是 render engine，不是 app platform。**
+
+# 2. 技术路线建议
+
+## 2.1 语言与工程
+
+采用：
+```
+pnpm + TypeScript
+```
+
+原因：
+
+- YAML 解析、CLI、浏览器 viewer、图可视化都在同一生态；
+- Agent 调用简单；
+- npm 分发简单；
+- 可视化依赖自然。
+
+推荐最小依赖：
+```
+yaml                 # parse YAML
+zod                  # runtime schema check
+cac                  # CLI
+cytoscape            # graph viewer
+cytoscape-dagre      # flow layout
+cytoscape-fcose      # cluster layout
+```
+
+先不引入 Svelte / Vue / Solid。理由：当前 UI 不复杂，直接用 TypeScript + Cytoscape 足够。框架会提高目录复杂度和构建复杂度，不符合 KISS。
+
+后续 UI 复杂化时再考虑 Svelte，但 v0 不需要。
+
+# 3. 核心设计：YAML 是唯一状态源
+
+## 3.1 不保存布局坐标
+
+不允许：
+```
+x: 120
+y: 300
+```
+
+允许：
+```
+views:
+  default: frontier
+  layouts:
+    flow:
+      constraints:
+        ranks:
+          - [goal]
+          - [q1, q2]
+          - [h1, h2]
+    cluster:
+      groups:
+        route-a: [h1, a1, e2]
+```
+
+区别：
+类型是否允许原因`x/y`绝对坐标否维护成本高，污染数据`layout: flow/cluster/frontier`是顶层视图意图`rank / group / pin`这类约束谨慎允许表达结构提示，不是视觉细节CSS 样式配置v0 不做避免变成主题系统
+# 4. YAML 基础模型：尽量小
+
+不要做复杂类型系统。节点类型用自由`kind`，状态用固定`state`，关系用可扩展`kind`。
+
+## 4.1 推荐 schema v0
+```
+version: 0.1
+title: Example Exploration Graph
+
+nodes:
+  - id: g1
+    kind: goal
+    state: active
+    title: 开放式项目主目标
+    note: 目标仍在演化，需要保留探索路径与剪枝理由。
+    tags: [mainline]
+
+  - id: h1
+    kind: hypothesis
+    state: active
+    title: 结构化探索图谱可以降低恢复成本
+    note: 需要通过最小原型验证。
+    tags: [frontier, route-a]
+
+  - id: h2
+    kind: hypothesis
+    state: closed
+    title: 做复杂图编辑器
+    note: 图上编辑过重，违背低负担使用模式。
+    closed:
+      why: 用户只需要改 YAML，图应该只是 view。
+      reopen_if: 明确出现大量必须手工调整图结构的场景。
+
+edges:
+  - from: g1
+    to: h1
+    kind: decomposes_to
+
+  - from: h2
+    to: h1
+    kind: supersedes
+
+sets:
+  mainline: [g1, h1]
+  frontier: [h1]
+  parking: []
+  archive: [h2]
+
+views:
+  default: frontier
+  enabled: [flow, cluster, frontier]
+```
+
+这里的`sets`很重要。它比在 node 里写`cursor: mainline`更泛用：
+```
+sets:
+  mainline: [...]
+  frontier: [...]
+  parking: [...]
+  archive: [...]
+```
+
+未来用户也可以自己加：
+```
+sets:
+  route-a: [...]
+  character-x: [...]
+  experiment-batch-1: [...]
+```
+
+Engine 不必理解所有 set，只要能高亮、过滤、聚类即可。
+
+# 5. 字段含义
+
+## Node
+```
+type Node = {
+  id: string
+  kind?: string        // 自由标签：goal/question/hypothesis/scene/risk/...
+  state?: State        // 固定状态
+  title: string
+  note?: string
+  tags?: string[]
+  links?: Link[]
+  closed?: ClosedReason
+  meta?: Record&lt;string, unknown&gt;
+}
+```
+
+固定`state`：
+```
+type State =
+  | &quot;seed&quot;
+  | &quot;candidate&quot;
+  | &quot;active&quot;
+  | &quot;blocked&quot;
+  | &quot;done&quot;
+  | &quot;closed&quot;
+  | &quot;archived&quot;
+```
+
+不要一开始引入`validated / invalidated / superseded`等太多状态。这些可以先用`state + edge.kind + tag`表达。
+
+例如：
+```
+state: closed
+tags: [superseded]
+```
+
+或者：
+```
+edges:
+  - from: old-route
+    to: new-route
+    kind: supersedes
+```
+
+## Edge
+```
+type Edge = {
+  from: string
+  to: string
+  kind?: string
+  label?: string
+  weight?: number
+  tags?: string[]
+  meta?: Record&lt;string, unknown&gt;
+}
+```
+
+推荐内置 edge kind：
+```
+decomposes_to
+depends_on
+supports
+refutes
+tests
+blocks
+selects
+rejects
+supersedes
+produces
+relates_to
+```
+
+但不强制枚举死。规则是：
+```
+recognized kind → 有特殊样式 / lint 语义
+unknown kind    → 作为普通关系边渲染
+```
+
+这样既 KISS，又保留扩展性。
+
+# 6. Engine 能做什么
+
+## 6.1 CLI 命令保持少
+
+我建议 v0 只做 4 个命令：
+```
+exgraph init
+exgraph check graph.yaml
+exgraph build graph.yaml -o dist
+exgraph serve graph.yaml
+```
+
+含义：
+命令作用`init`生成最小`graph.yaml``check`schema validate + semantic lint`build`生成静态 HTML`serve`本地 serve YAML，浏览器查看，文件变更自动刷新
+不要一开始做`query / diff / normalize / export`。这些是 v1。
+
+## 6.2 serve 的 UX
+```
+exgraph serve graph.yaml --port 4317
+```
+
+打开：
+```
+http://localhost:4317
+```
+
+内部逻辑：
+```
+浏览器访问 /
+  ↓
+viewer 加载 /graph.json
+  ↓
+server 每次读取 graph.yaml → parse → normalize → check → return JSON
+  ↓
+浏览器轮询 hash/version
+  ↓
+yaml 变更后自动刷新图
+```
+
+这样不需要复杂 HMR。
+
+# 7. Renderer 设计
+
+## 7.1 三个默认视图
+
+### Flow
+
+用途：
+```
+看路径、依赖、收束。
+```
+
+技术：
+```
+cytoscape-dagre
+```
+
+适合：
+```
+目标 → 问题 → 假设 → 尝试 → 证据 → 决策 → 产物
+```
+
+### Cluster
+
+用途：
+```
+看局部团簇、竞争路线、主题网络。
+```
+
+技术：
+```
+cytoscape-fcose
+```
+
+适合：
+```
+小说设定、产品机会、研究议题、架构组件关系
+```
+
+### Frontier
+
+用途：
+```
+看当前工作记忆：mainline / frontier / parking / archive。
+```
+
+技术：
+```
+Cytoscape concentric 或自定义 radial
+```
+
+空间语义：
+```
+中心：mainline
+第一圈：frontier
+第二圈：candidate / parking
+外圈：closed / archived
+```
+
+## 7.2 UI 只保留必要交互
+
+保留：
+```
+- layout switch
+- node kind filter
+- node state filter
+- edge kind filter
+- set filter
+- search
+- click node → show 1-hop neighborhood
+- toggle closed / archived
+```
+
+不做：
+```
+- 图上新增节点
+- 图上拖拽连线
+- 图上编辑属性
+- 保存布局
+```
+
+# 8. Lint：防止复杂度反噬
+
+你担心 B：不好维护；以及“复杂度过高”。所以 v0 的关键不是 renderer，而是`check`。
+
+## 8.1 schema check
+
+硬错误：
+```
+- duplicate node id
+- edge points to missing node
+- set references missing node
+- invalid YAML
+- missing title
+```
+
+## 8.2 semantic lint
+
+警告，不阻断：
+```
+- closed node has no closed.why
+- blocked node has no incoming blocks / depends_on edge
+- frontier set has too many nodes
+- mainline set is empty
+- orphan nodes exceed threshold
+- too many relates_to edges
+- decision-like node has no incoming supports / refutes / selects
+```
+
+这个比复杂图渲染更重要。因为 Agent 写 YAML 时，最容易污染图谱。
+
+# 9. 项目结构
+
+保持单包，不做 monorepo：
+```
+exgraph/
+  package.json
+  pnpm-lock.yaml
+  tsconfig.json
+
+  src/
+    cli.ts
+    schema.ts
+    parse.ts
+    normalize.ts
+    check.ts
+    build.ts
+    serve.ts
+
+  viewer/
+    index.html
+    main.ts
+    style.css
+    cytoscape-style.ts
+    layouts.ts
+
+  examples/
+    basic.yaml
+    research.yaml
+    fiction.yaml
+    product.yaml
+
+  skill/
+    SKILL.md
+
+  README.md
+```
+
+构建输出：
+```
+dist/
+  cli.js
+  viewer/
+    index.html
+    assets/...
+```
+
+# 10. Agent Skill 的角色
+
+SKILL 不实现图谱，只约束 Agent 使用方式。
+
+## Agent 行为
+```
+当用户进行长线探索型任务时：
+1. 判断是否需要更新 graph.yaml
+2. 只写 durable node / edge，不记录临时闲聊
+3. 通过 sets 更新 mainline / frontier / parking / archive
+4. 对 closed 节点写 closed.why
+5. 避免滥用 relates_to
+6. 修改后运行 exgraph check
+7. 告诉用户当前 mainline / frontier / blocked / closed 变化
+```
+
+## Agent 输出应偏向 summary
+
+Agent 不应该 dump 整个 YAML。它应该说：
+```
+已更新：
+- frontier 新增 h1
+- h2 标记 closed，原因是...
+- h1 supersedes h2
+- check 发现 1 个 warning：blocked 节点缺少 blocker
+```
+
+# 11. V0 目标定义
+
+我建议 v0 的成功标准写死：
+
+**给定一个 graph.yaml，exgraph serve graph.yaml 能打开一个本地页面，用户能通过 flow / cluster / frontier 三个视图理解当前状态。**
+
+v0 必须完成：
+```
+- YAML parse
+- Zod schema validation
+- semantic lint
+- local serve
+- static build
+- Cytoscape viewer
+- flow / cluster / frontier 三视图
+- filter/search/focus
+- example YAML
+```
+
+v0 不做：
+```
+- domain profile
+- GUI edit
+- plugin system
+- database
+- multi-file graph
+- Git diff
+- AI 自动抽取
+- layout 坐标保存
+```
+
+# 12. 我建议的第一阶段实现顺序
+```
+Step 1: 定 schema.ts
+Step 2: parse + normalize YAML
+Step 3: check graph.yaml
+Step 4: build viewer with embedded graph JSON
+Step 5: serve graph.yaml with auto refresh
+Step 6: Cytoscape flow layout
+Step 7: cluster / frontier layouts
+Step 8: examples + SKILL.md
+```
+
+不要先做漂亮 viewer。先确保：
+```
+YAML → normalized graph model → diagnostics → render
+```
+
+这条链稳定。
+
+# 13. 剩余关键确认
+
+现在只剩 4 个关键选择。
+
+## Q1. 单文件还是目录模式？
+
+我的建议：
+```
+v0: 单文件 graph.yaml
+v1: 支持目录模式
+```
+
+目录模式可能是：
+```
+.exgraph/
+  graph.yaml
+  nodes/
+  views.yaml
+```
+
+但 v0 不做。
+
+## Q2. 是否接受 sets 作为核心概念？
+
+我强烈建议接受。它比`cursor`更通用，也更适合 Agent 写。
+```
+sets:
+  mainline: [...]
+  frontier: [...]
+  parking: [...]
+  archive: [...]
+```
+
+## Q3. 是否允许 unknown kind？
+
+我的建议：
+```
+允许。
+```
+
+Engine 只对少数内置`edge.kind`提供样式和 lint。`node.kind`基本完全自由。
+
+## Q4. 是否现在就进入项目骨架实现？
+
+我建议下一步直接产出：
+```
+exgraph-v0/
+  package.json
+  src/
+  viewer/
+  examples/basic.yaml
+```
+
+先做可运行骨架，不做过度设计。</content>
+  </message>
+  <message role="user">
+    <content>Extra: {
+
+    - 内部需要维护一个 spec/ 文档，作为产品的 spec，方便后面本地AGENT开发
+
+    - 内部维护一个面向使用者的AGENT SKILL
+
+}
+
+回答: {
+	1. 我无法判断，因为我无法判断工作量；单文件和目录是需要根据实际情况的；不过可以先考虑单文件模式; 其他想法: 也许可以通过类似扩展、 LINK 等方式引入其他 yaml 的图谱合并成一个 BIG GRAPH；也就是单个文件高内聚，多个文件弱耦合但可组织
+	2. 告诉我二者的区别；并区分他们影响到的是“解决问题本身”还是“实现的技术细节”如果是前者，需要讨论，如果是后者，选择最有利于解决问题的
+	3. 可以
+	4. 下一步给我大致的框架级别的 spec；我确认之后，就开始实现
+}</content>
+  </message>
+  <message role="assistant">
+    <content>## 结论
+
+下一步应定义为：
+
+**ExGraph v0：面向 Agent 的 YAML-first 探索图谱轻工具。**用户/Agent 只维护 YAML；Engine 负责`check → normalize → layout → render → serve`。
+
+我建议下一步先落一个框架级 spec，不直接写代码。确认后再实现。
+
+# 1. 关于 sets vs cursor
+
+你问“二者区别，以及影响的是问题本身还是技术细节”。核心区别如下。
+
+## 1.1 cursor
+```
+nodes:
+  - id: h1
+    title: 路线 A
+    cursor: frontier
+```
+
+含义：某个节点当前处于某种“工作指针”状态。
+
+特点：
+
+- 简单直观；
+- 适合表达`mainline / frontier / parking`；
+- 但一个节点通常只能写一个 cursor；
+- 不适合表达“同一节点同时属于多个工作集合”。
+
+问题：
+```
+cursor: frontier
+```
+
+无法自然表达：
+```
+h1 同时属于：
+- mainline
+- route-a
+- current-week
+- chapter-2
+- agent-review-needed
+```
+
+所以`cursor`更像一个**特殊状态字段**。
+
+## 1.2 sets
+```
+sets:
+  mainline: [g1, q1, h1, d1]
+  frontier: [h1, a1, r1]
+  route-a: [h1, a1, e2]
+  archive: [h3]
+```
+
+含义：命名节点集合。它可以表达主线、当前前沿、归档、路线、章节、人物线、实验批次等。
+
+特点：
+
+- 一个节点可以属于多个 set；
+- set 名称可以通用，也可以由用户/Agent 自定义；
+- renderer 可以用 set 做高亮、过滤、布局约束；
+- 比`cursor`更领域无关。
+
+## 1.3 这个选择影响“问题本身”还是“实现细节”？
+
+**主要影响问题本身。**
+
+因为它决定系统如何表达“当前工作结构”。
+方案对问题表达的影响`cursor`把当前状态理解成节点的单一角色`sets`把当前状态理解成多个可重叠的工作视图
+你的目标是长线探索管理，常见情况是：
+```
+同一个节点既是当前主线的一部分，
+又是当前 frontier，
+还属于某个候选路线，
+也可能属于某个阶段性任务包。
+```
+
+所以我建议：
+
+**v0 采用 sets 作为核心概念，不单独设计 cursor。**
+
+为了方便，约定几个内置 set 名称：
+```
+sets:
+  mainline: []
+  frontier: []
+  parking: []
+  archive: []
+```
+
+但允许用户自定义：
+```
+sets:
+  route-a: []
+  chapter-1: []
+  experiment-batch-1: []
+```
+
+# 2. 关于单文件 vs 目录 / imports
+
+你的判断合理：v0 可以先单文件，但需要为未来合并多图谱保留路径。
+
+这里要区分两个概念。
+
+## 2.1 links
+
+`links`是节点关联的外部资料。
+```
+nodes:
+  - id: h1
+    title: 路线 A
+    links:
+      - title: 文献综述
+        href: ./notes/lit-review.md
+```
+
+它解决的是：
+```
+这个节点引用了哪些外部材料？
+```
+
+不参与图谱合并。
+
+## 2.2 imports
+
+`imports`是把其他 YAML 图谱合并进当前图。
+```
+imports:
+  - path: ./subgraphs/research.yaml
+    namespace: research
+```
+
+它解决的是：
+```
+多个高内聚 graph.yaml 如何组织成一个 Big Graph？
+```
+
+这是图谱组织能力，不是普通链接。
+
+## 2.3 影响问题本身还是实现细节？
+
+单文件 / imports 主要是**实现与维护规模问题**，不是核心问题模型。
+
+但当图谱变大后，它会反过来影响使用体验：
+规模推荐小图谱单文件中等图谱单文件 + anchors / comments大图谱imports / directory mode多项目图谱namespace + imports
+我的建议：
+
+**v0 实现单文件。spec 里保留 imports 为 v1 扩展，不在 v0 实现。**
+
+原因：
+
+- v0 先验证核心体验；
+- imports 涉及 namespace、循环依赖、ID 冲突、错误定位；
+- 过早实现会增加复杂度。
+
+# 3. ExGraph v0 框架级 Spec Draft
+
+下面是建议的框架级 spec。它不是代码级设计，而是给后续本地 Agent 开发用的产品/工程约束。
+编辑
+# ExGraph v0 Spec
+
+## 0. Positioning
+
+ExGraph is a YAML-first exploration graph renderer for long-running, open-ended work.
+
+It is designed for Agent-assisted workflows where the Agent updates a YAML file and the engine validates, normalizes, renders, and serves views for the user.
+
+Core formula:
+```
+View = render(graph.yaml)
+```
+
+The YAML file is the single source of truth. The renderer must not require users or Agents to edit visual coordinates, GUI state, or generated artifacts.
+
+## 1. Goals
+
+ExGraph v0 should help users and Agents answer:
+```
+1. What is the current mainline?
+2. What is the current frontier?
+3. What is blocked?
+4. Which branches are closed or archived?
+5. Which nodes support, refute, block, or supersede others?
+6. What changed in the graph structure after Agent updates?
+```
+
+ExGraph is not a general knowledge base, project management platform, or visual graph editor.
+
+## 2. Non-goals
+
+ExGraph v0 must not implement:
+```
+- Graph editing inside the browser
+- Dragging nodes to save layout coordinates
+- Database storage
+- Multi-user collaboration
+- Plugin system
+- Domain-specific ontologies
+- Obsidian / Notion replacement
+- AI extraction logic
+- Directory graph composition
+- Persistent layout coordinates
+```
+
+The tool should stay lightweight and serve the Agent workflow.
+
+## 3. Core Workflow
+
+Expected workflow:
+```
+User / Agent edits graph.yaml
+        ↓
+exgraph check graph.yaml
+        ↓
+exgraph serve graph.yaml
+        ↓
+Browser opens local viewer
+        ↓
+User reviews flow / cluster / frontier views
+```
+
+Build workflow:
+```
+exgraph build graph.yaml -o dist
+```
+
+Output:
+```
+dist/
+  index.html
+  graph.json
+  assets/...
+```
+
+## 4. CLI Commands
+
+v0 exposes four commands.
+
+### 4.1 init
+```
+exgraph init
+```
+
+Creates a minimal`graph.yaml`.
+
+### 4.2 check
+```
+exgraph check graph.yaml
+```
+
+Runs:
+```
+- YAML parse
+- schema validation
+- graph normalization
+- semantic lint
+```
+
+### 4.3 build
+```
+exgraph build graph.yaml -o dist
+```
+
+Generates a static viewer.
+
+### 4.4 serve
+```
+exgraph serve graph.yaml --port 4317
+```
+
+Starts a local development server. The viewer should reload or refetch when`graph.yaml`changes.
+
+## 5. YAML Schema v0
+
+### 5.1 Top-level shape
+```
+version: 0.1
+title: Example Exploration Graph
+
+nodes: []
+edges: []
+sets: {}
+
+views:
+  default: frontier
+  enabled: [flow, cluster, frontier]
+```
+
+Required fields:
+```
+version
+title
+nodes
+edges
+```
+
+Optional fields:
+```
+sets
+views
+meta
+```
+
+## 6. Nodes
+
+### 6.1 Node shape
+```
+nodes:
+  - id: h1
+    kind: hypothesis
+    state: active
+    title: 结构化探索图谱可以降低恢复成本
+    note: 需要通过最小原型验证。
+    tags: [frontier, route-a]
+    links:
+      - title: Prototype
+        href: ./prototype.html
+    closed:
+      why: 不再适合作为主线
+      reusable: 可复用其中的问题定义
+      reopen_if: 出现新的强证据
+    meta:
+      confidence: 0.62
+```
+
+### 6.2 Required node fields
+```
+id
+title
+```
+
+### 6.3 Recommended node fields
+```
+kind
+state
+note
+tags
+```
+
+### 6.4 Node kind
+
+`kind`is intentionally open-ended.
+
+Recommended generic kinds:
+```
+goal
+question
+hypothesis
+option
+attempt
+evidence
+decision
+artifact
+risk
+task
+```
+
+The engine must allow unknown`kind`values.
+
+Unknown kinds should still render correctly with fallback styling.
+
+### 6.5 Node state
+
+`state`is controlled in v0.
+
+Allowed states:
+```
+seed
+candidate
+active
+blocked
+done
+closed
+archived
+```
+
+State meaning:
+```
+seed       early idea
+candidate possible but not committed
+active    currently relevant
+blocked   cannot progress until dependency/risk is resolved
+done      completed and still valid
+closed    deliberately closed
+archived  retained but outside current work
+```
+
+### 6.6 Closed reason
+
+A`closed`node should include:
+```
+closed:
+  why: string
+  reusable: string
+  reopen_if: string
+```
+
+`closed.why`is recommended and should trigger a lint warning when absent.
+
+## 7. Edges
+
+### 7.1 Edge shape
+```
+edges:
+  - from: e1
+    to: h1
+    kind: supports
+    label: supports
+    weight: 0.8
+    tags: [rationale]
+    meta:
+      source: literature-review
+```
+
+### 7.2 Required edge fields
+```
+from
+to
+```
+
+### 7.3 Recommended edge fields
+```
+kind
+label
+```
+
+### 7.4 Edge kind
+
+Recognized edge kinds:
+```
+decomposes_to
+depends_on
+supports
+refutes
+tests
+blocks
+selects
+rejects
+supersedes
+produces
+relates_to
+```
+
+The engine must allow unknown edge kinds.
+
+Recognized kinds receive semantic styling and lint support. Unknown kinds render as generic edges.
+
+### 7.5 Edge direction
+
+Edge direction should encode semantic direction.
+
+Examples:
+```
+- from: evidence-a
+  to: hypothesis-a
+  kind: supports
+
+- from: risk-a
+  to: task-a
+  kind: blocks
+
+- from: old-route
+  to: new-route
+  kind: supersedes
+```
+
+## 8. Sets
+
+### 8.1 Purpose
+
+`sets`are named node collections.
+
+They represent views, work focus, routes, stages, or user-defined groupings.
+```
+sets:
+  mainline: [g1, q1, h1, d1]
+  frontier: [h1, a1, r1]
+  parking: [h2]
+  archive: [h3]
+  route-a: [h1, a1, e2]
+```
+
+### 8.2 Built-in set names
+
+The engine recognizes these names when present:
+```
+mainline
+frontier
+parking
+archive
+```
+
+### 8.3 Custom sets
+
+Custom sets are allowed.
+
+The engine should expose them as filters and may use them for cluster layout hints.
+
+### 8.4 Missing sets
+
+A graph remains valid without sets, but the renderer should show a warning if both`mainline`and`frontier`are absent.
+
+## 9. Views
+
+### 9.1 View config
+```
+views:
+  default: frontier
+  enabled: [flow, cluster, frontier]
+```
+
+### 9.2 Built-in views
+
+v0 supports three views:
+```
+flow
+cluster
+frontier
+```
+
+### 9.3 Flow view
+
+Purpose:
+```
+Show directional paths, dependencies, and convergence.
+```
+
+Recommended layout engine:
+```
+Cytoscape + dagre
+```
+
+### 9.4 Cluster view
+
+Purpose:
+```
+Show strongly related local groups and competing branches.
+```
+
+Recommended layout engine:
+```
+Cytoscape + fcose
+```
+
+### 9.5 Frontier view
+
+Purpose:
+```
+Show current work memory: mainline, frontier, parking, archive.
+```
+
+Layout semantics:
+```
+mainline near center
+frontier near mainline
+candidate / parking farther out
+closed / archived outer or collapsed
+```
+
+## 10. Layout Constraints
+
+v0 should not store absolute coordinates.
+
+Forbidden:
+```
+nodes:
+  - id: h1
+    x: 100
+    y: 200
+```
+
+Allowed in future or experimental form:
+```
+layout:
+  ranks:
+    - [g1]
+    - [q1, q2]
+    - [h1, h2]
+
+  clusters:
+    route-a: [h1, a1, e2]
+```
+
+v0 may parse but ignore layout constraints.
+
+The renderer should prioritize automatic layout.
+
+## 11. Imports
+
+v0 does not implement imports.
+
+The spec reserves future syntax:
+```
+imports:
+  - path: ./subgraphs/research.yaml
+    namespace: research
+```
+
+Future rules should include:
+```
+- imported ids are namespaced
+- imports are resolved before validation
+- circular imports are errors
+- imported sets may be merged or namespaced
+```
+
+Imports are reserved for v1.
+
+## 12. Check and Lint
+
+### 12.1 Hard errors
+
+`exgraph check`fails on:
+```
+- invalid YAML
+- duplicate node id
+- edge references missing node
+- set references missing node
+- missing node title
+- invalid state
+```
+
+### 12.2 Warnings
+
+`exgraph check`warns on:
+```
+- closed node without closed.why
+- blocked node without incoming blocks / depends_on edge
+- empty mainline set
+- empty frontier set
+- too many frontier nodes
+- orphan nodes above threshold
+- too many relates_to edges
+- decision-like node without incoming supports / refutes / selects
+```
+
+Warnings should not block rendering.
+
+## 13. Viewer UX
+
+The static viewer should support:
+```
+- layout switch: flow / cluster / frontier
+- node kind filter
+- node state filter
+- edge kind filter
+- set filter
+- search
+- toggle closed / archived nodes
+- click node to show 1-hop neighborhood
+- side panel for node details
+```
+
+The viewer must not support editing.
+
+## 14. Renderer Output
+
+`exgraph build graph.yaml -o dist`should generate:
+```
+dist/
+  index.html
+  graph.json
+  assets/
+```
+
+`graph.json`should be a normalized graph model, not raw YAML.
+
+## 15. Agent Usage Contract
+
+Agents should update only YAML, not generated files.
+
+Agents should:
+```
+- add only durable nodes and edges
+- avoid recording transient conversation noise
+- update sets.mainline / sets.frontier when project focus changes
+- write closed.why when closing a node
+- avoid overusing relates_to
+- run exgraph check after editing
+- report semantic changes, warnings, and rendered output location
+```
+
+Agents should ask user confirmation before:
+```
+- closing active nodes
+- changing mainline
+- deleting nodes
+- converting hypothesis into decision
+```
+
+## 16. v0 Acceptance Criteria
+
+v0 is successful when:
+```
+1. A user can write a single graph.yaml.
+2. exgraph check reports useful errors and warnings.
+3. exgraph serve graph.yaml opens a local viewer.
+4. The viewer renders flow / cluster / frontier views.
+5. The user can filter by kind, state, edge kind, and set.
+6. Clicking a node shows incoming and outgoing relationships.
+7. Closed branches remain visible but can be hidden.
+8. No manual layout coordinates are required.
+```
+
+## 17. Recommended Tech Stack
+```
+Package manager: pnpm
+Language: TypeScript
+CLI: cac
+YAML parser: yaml
+Validation: zod
+Viewer: Cytoscape.js
+Layouts:
+  - cytoscape-dagre
+  - cytoscape-fcose
+Server: Vite dev server or minimal Node HTTP server
+Testing: vitest
+```
+
+Avoid Svelte/Vue/Solid in v0 unless viewer complexity grows.
+
+## 18. Repository Structure
+```
+exgraph/
+  package.json
+  pnpm-lock.yaml
+  tsconfig.json
+  README.md
+
+  spec/
+    EXGRAPH_SPEC.md
+
+  src/
+    cli.ts
+    parse.ts
+    schema.ts
+    normalize.ts
+    check.ts
+    build.ts
+    serve.ts
+
+  viewer/
+    index.html
+    main.ts
+    style.css
+    cytoscape-style.ts
+    layouts.ts
+
+  examples/
+    basic.yaml
+    research.yaml
+    fiction.yaml
+    product.yaml
+
+  skill/
+    SKILL.md
+```
+
+# 4. 面向 Agent 的 Skill 定位
+
+`skill/SKILL.md`不应该讲技术实现。它只规定 Agent 的行为边界。
+
+核心原则：
+```
+Agent 只编辑 graph.yaml
+Engine 负责 check/render/serve
+Agent 不碰生成物
+Agent 不手写布局坐标
+Agent 不把临时闲聊塞进图谱
+```
+
+SKILL 触发条件：
+```
+- 长线研究规划
+- 长篇写作
+- 产品探索
+- 架构迁移
+- 多路线并行试探
+- 需要保存 dead branch / negative knowledge
+```
+
+Skill 中最重要的是“何时问用户确认”：
+```
+必须确认：
+- 关闭 active 节点
+- 改变 mainline
+- 删除节点
+- 把 hypothesis 改成 decision
+- 合并两个路线
+```
+
+可自动做：
+```
+- 新增 candidate 节点
+- 新增 evidence / artifact 节点
+- 新增 supports / refutes / blocks 边
+- 更新 frontier set
+- 运行 exgraph check
+```
+
+# 5. 我建议确认的三件事
+
+## 1. 是否采用 sets 作为核心概念？
+
+我的建议：**采用。**
+
+不再设计`cursor`字段。`mainline / frontier / parking / archive`都用`sets`表达。
+
+## 2. v0 是否明确不实现 imports？
+
+我的建议：**v0 不实现，但 spec 保留。**
+
+理由：避免一开始处理 namespace、循环依赖、ID 冲突。
+
+## 3. v0 是否不引入 UI 框架？
+
+我的建议：**不引入。**
+
+使用：
+```
+TypeScript + Cytoscape.js + plain HTML/CSS
+```
+
+Svelte/Vue/Solid 先不需要。一旦引入框架，工程结构和构建复杂度会明显上升，但 v0 的 UI 需求还不足以抵消这部分成本。</content>
+  </message>
+  <message role="user">
+    <content>意见:
+- build/serve 如果有编译产物应当对使用者透明，最好是默认输出到临时目录中，不要污染graph.yaml 所在的工作空间；具体方案自行考虑
+- 另外我需要你再思考检查 graph schema 的定义 | NOTE: 这不是在说你当前的有什么问题，而是需要你参考下面的思路做一次重新独立思考检查 =&gt; {
+
+		请依照这个思考逻辑：这个 graph 的消费者并非传统的 APP 程序，而是用来给 User 在长线任务中，管理任务本身
+		所有的设计应该以实用为准，在使用过程中 AGENT/User 写 yaml 数据，engine 渲染
+		因此真正需要关注的是:
+			- schema 中哪些字段对 User/AGENT 来说是真正有价值的语义信息
+			- 哪些字段是对软件引擎来说必要的信息
+			- 除了这些之外，其他的所有字段都需要考虑在 “完全结构化 vs 自然语言注释化”之间平衡
+
+		例如：某字段，如果只是为了呈现，那么就不要拆分复杂数据类型结构，使用自然语言描述降低复杂度才能提供 AGENT/USer 编写的正确率；如果是为了给 engine 解析，那么就需要良定义的数据类型
+
+}
+- Extra Instruct: {`HTML UI = LLM-Generate( User Intend) `考虑到 GPT 模型在前端样式方面并不非常 擅长, 你现在编写的 HTML UI/STYLE 本身是可能会重构的
+
+	所以请你务必写区分清楚目的、 实现；在交付产物中，明确定义清楚设计的规范、 目标 =&gt; 实现的效果：未来如果我对实现的 UI 不满意，我可以随时找另一个 AGENT 安全的重构 UI 层，而我期望达成的目的却忠实保留
+}</content>
+  </message>
+  <message role="assistant">
+    <content>收到。你这次反馈里最关键的是一句：
+
+**schema 不是给传统 APP 存业务对象用的，而是给 User/Agent 维护长线任务状态用的。**
+
+因此 schema 的设计标准应该从“数据建模完整性”切换为：
+
+**最低结构化成本下，稳定支持 User 理解状态、Agent 正确维护、Engine 自动渲染。**
+
+下面是我重新独立检查后的修正版。
+
+# 1. 先修正命令目标：build 改为 export
+
+你说得对：如果默认`build`在当前目录生成`dist/`，会污染用户工作空间。
+
+我建议 v0 命令改为：
+```
+exgraph init
+exgraph check graph.yaml
+exgraph serve graph.yaml
+exgraph export graph.yaml -o &lt;dir&gt;
+```
+
+## 1.1 serve 行为
+```
+exgraph serve graph.yaml
+```
+
+默认：
+```
+不向 graph.yaml 所在目录写任何文件。
+```
+
+实现方式：
+```
+- viewer bundle 来自 npm package 内部资源
+- graph.yaml 每次变更后被 server 重新 parse / normalize / check
+- 浏览器从 /graph.json 获取 normalized graph
+- 临时缓存若需要，放 OS temp/cache 目录
+```
+
+例如：
+```
+/tmp/exgraph/&lt;hash&gt;/
+%LOCALAPPDATA%/Temp/exgraph/&lt;hash&gt;/
+```
+
+但对用户透明。
+
+## 1.2 export 行为
+
+只有用户显式要求时才输出静态文件：
+```
+exgraph export graph.yaml -o dist
+```
+
+这比`build`语义更清楚：
+命令是否写入用户工作区语义`serve`否临时查看`check`否校验`export -o`是，显式导出可分享静态文件
+所以 v0 不需要`build`。用`export`替代。
+
+# 2. Schema 重新思考：字段分三类
+
+## 2.1 Engine 必须结构化的字段
+
+这些字段用于解析、检查、布局、过滤。
+```
+version
+title
+nodes[].id
+nodes[].kind
+nodes[].state
+edges[].from
+edges[].to
+edges[].kind
+sets
+render
+```
+
+这些必须是良定义数据类型。
+
+## 2.2 User/Agent 真正有价值的语义字段
+
+这些字段用于恢复上下文、理解状态、解释为什么这么做。
+```
+nodes[].title
+nodes[].note
+nodes[].state_note
+edges[].label
+edges[].note
+```
+
+它们不应该拆成过细结构。因为 User/Agent 写 YAML 时，**自然语言的正确率高于复杂对象结构**。
+
+## 2.3 暂时不应强结构化的字段
+
+例如：
+```
+reusable
+reopen_if
+confidence
+priority
+source
+owner
+created_at
+updated_at
+```
+
+这些有时有用，但不应成为 v0 核心 schema。
+
+理由：
+
+- 很容易诱导 Agent 填垃圾字段；
+- 维护成本高；
+- 不一定对所有门类通用；
+- 很多内容写在`note`/`state_note`里更稳。
+
+所以 v0 应避免把“可能有用”都结构化。
+
+# 3. 关键 schema 修正：取消 closed 对象
+
+之前设计：
+```
+closed:
+  why: ...
+  reusable: ...
+  reopen_if: ...
+```
+
+这个从语义上合理，但从实际维护看偏重。更 KISS 的方案是：
+```
+state: closed
+state_note: &gt;
+  关闭原因：图上编辑器过重，违背低负担使用模式。
+  可复用：其中的 focus / filter 交互思想。
+  重开条件：出现大量必须手工调整图结构的场景。
+```
+
+## 为什么更好
+旧方案新方案多字段结构化一个自然语言字段Agent 容易漏字段Agent 只需写清楚原因对 fiction/research/product 不一定通用通用Engine 只能检查字段存在Engine 同样可以检查`state_note`存在
+Engine 不需要理解`reusable`和`reopen_if`。User 需要的是读懂关闭理由。自然语言足够。
+
+# 4. 修正版 YAML Schema v0
+
+## 4.1 最小示例
+```
+version: 0.1
+title: Exploration Graph Demo
+
+nodes:
+  - id: g1
+    kind: goal
+    state: active
+    title: 管理长线探索任务状态
+    note: &gt;
+      目标是让 User/Agent 能恢复主线、前沿、死节点和关键判断关系。
+
+  - id: h1
+    kind: hypothesis
+    state: active
+    title: YAML-first 图谱可以降低维护成本
+    note: &gt;
+      User/Agent 只维护 YAML；engine 负责 check、layout、render。
+    tags: [mainline, frontier]
+
+  - id: h2
+    kind: option
+    state: closed
+    title: 做复杂图上编辑器
+    state_note: &gt;
+      关闭原因：图上编辑过重，违背低负担使用模式。
+      可复用：focus、filter、path highlight 这些查看交互。
+      重开条件：后续发现 YAML 编辑无法承载真实使用场景。
+
+edges:
+  - from: g1
+    to: h1
+    kind: supports
+    label: 支持
+
+  - from: h2
+    to: h1
+    kind: supersedes
+    label: 被替代
+
+sets:
+  mainline: [g1, h1]
+  frontier: [h1]
+  archive: [h2]
+
+render:
+  default_view: frontier
+  views: [flow, cluster, frontier]
+```
+
+# 5. Node 字段重新定义
+
+## 5.1 Core Node
+```
+type Node = {
+  id: string
+  title: string
+
+  kind?: string
+  state?: NodeState
+
+  note?: string
+  state_note?: string
+
+  tags?: string[]
+  meta?: Record&lt;string, unknown&gt;
+}
+```
+
+## 5.2 字段含义
+字段类型目的归类`id`string引用节点engine 必需`title`string人类识别节点user 必需`kind`string视觉、过滤、弱语义engine 有用`state`enum状态、过滤、lintengine 有用`note`markdown string节点长期语义user/agent 价值`state_note`markdown string解释当前状态原因user/agent 价值 + lint`tags`string[]过滤、弱分组engine 有用`meta`map扩展逃生口v0 不依赖
+# 6. state 保持小集合
+```
+type NodeState =
+  | &quot;seed&quot;
+  | &quot;candidate&quot;
+  | &quot;active&quot;
+  | &quot;blocked&quot;
+  | &quot;done&quot;
+  | &quot;closed&quot;
+  | &quot;archived&quot;
+```
+
+不加入：
+```
+validated
+invalidated
+superseded
+```
+
+因为这些可以通过边表达：
+```
+edges:
+  - from: evidence-a
+    to: hypothesis-a
+    kind: supports
+
+  - from: evidence-b
+    to: hypothesis-a
+    kind: refutes
+
+  - from: old-route
+    to: new-route
+    kind: supersedes
+```
+
+状态只表达“当前管理状态”，不表达全部逻辑语义。
+
+# 7. Edge 字段重新定义
+
+## 7.1 Core Edge
+```
+type Edge = {
+  from: string
+  to: string
+
+  kind?: string
+  label?: string
+  note?: string
+
+  tags?: string[]
+  meta?: Record&lt;string, unknown&gt;
+}
+```
+
+## 7.2 字段分类
+字段目的归类`from`起点engine 必需`to`终点engine 必需`kind`边语义、样式、lintengine 有用`label`图上短文本user 可读`note`解释边关系自然语言`tags`过滤engine 可用`meta`扩展v0 不依赖
+## 7.3 不引入 weight
+
+之前的`weight`可以删掉。原因：
+
+- v0 不应该让用户/Agent 维护图布局权重；
+- 如果只是为了渲染，属于实现细节；
+- 如果以后需要，可由 engine 根据`kind/tags/sets`推断。
+
+# 8. Edge kind：开放，但内置识别少量语义
+
+推荐内置：
+```
+decomposes_to
+depends_on
+supports
+refutes
+tests
+blocks
+selects
+rejects
+supersedes
+produces
+relates_to
+```
+
+规则：
+```
+recognized kind → 特殊样式 + lint 语义
+unknown kind    → 普通边，仍然渲染
+```
+
+这符合你的要求：
+
+基础模型 KISS；支持 Agent 做 domain-specific 扩展；不在类型系统上做复杂花样。
+
+# 9. sets 保留为核心概念
+
+我仍建议保留`sets`，因为它直接服务“长线任务管理”。
+```
+sets:
+  mainline: [g1, h1, d1]
+  frontier: [h1, a1, r1]
+  parking: [h2]
+  archive: [h3]
+  route-a: [h1, a1, e2]
+```
+
+## 为什么不是实现细节
+
+`sets`表达的是用户工作结构，不是 UI 状态。
+
+它回答：
+```
+当前主线是什么？
+当前前沿是什么？
+哪些节点暂存？
+哪些节点归档？
+哪些节点属于同一路线？
+```
+
+这正是问题本身。
+
+# 10. render 是配置，不是图谱语义
+```
+render:
+  default_view: frontier
+  views: [flow, cluster, frontier]
+```
+
+`render`应明确归类为 engine hint。
+
+它不表示任务本身，只表示：
+```
+这份 graph.yaml 推荐用什么视图查看。
+```
+
+## v0 允许的 render 字段
+```
+type RenderConfig = {
+  default_view?: &quot;flow&quot; | &quot;cluster&quot; | &quot;frontier&quot;
+  views?: Array&lt;&quot;flow&quot; | &quot;cluster&quot; | &quot;frontier&quot;&gt;
+}
+```
+
+## v0 不做复杂布局约束
+
+暂时不实现：
+```
+render:
+  constraints:
+    ranks:
+      - [g1]
+      - [h1, h2]
+```
+
+理由：
+
+- 先验证自动布局；
+- 布局约束很容易诱导用户维护视觉细节；
+- 未来可加，但不应进入 v0。
+
+可以在 spec 中保留“未来允许声明式布局约束”的方向，但不实现。
+
+# 11. imports 保留为未来扩展，不进 v0
+
+你的 Big Graph 思路成立：
+```
+imports:
+  - path: ./research.yaml
+    namespace: research
+```
+
+但 v0 不实现。原因：
+
+- namespace 规则会复杂化；
+- ID 冲突处理会复杂化；
+- 错误定位会复杂化；
+- 单文件先验证体验更重要。
+
+spec 中可以写：
+```
+v0 uses a single YAML file.
+v1 may support imports.
+```
+
+# 12. 重新整理后的 v0 Schema
+```
+type ExGraph = {
+  version: string
+  title: string
+
+  nodes: Node[]
+  edges?: Edge[]
+  sets?: Record&lt;string, string[]&gt;
+  render?: RenderConfig
+
+  meta?: Record&lt;string, unknown&gt;
+}
+
+type Node = {
+  id: string
+  title: string
+
+  kind?: string
+  state?: NodeState
+
+  note?: string
+  state_note?: string
+
+  tags?: string[]
+  meta?: Record&lt;string, unknown&gt;
+}
+
+type Edge = {
+  from: string
+  to: string
+
+  kind?: string
+  label?: string
+  note?: string
+
+  tags?: string[]
+  meta?: Record&lt;string, unknown&gt;
+}
+
+type NodeState =
+  | &quot;seed&quot;
+  | &quot;candidate&quot;
+  | &quot;active&quot;
+  | &quot;blocked&quot;
+  | &quot;done&quot;
+  | &quot;closed&quot;
+  | &quot;archived&quot;
+
+type RenderConfig = {
+  default_view?: &quot;flow&quot; | &quot;cluster&quot; | &quot;frontier&quot;
+  views?: Array&lt;&quot;flow&quot; | &quot;cluster&quot; | &quot;frontier&quot;&gt;
+}
+```
+
+这比上一版更干净。
+
+# 13. Lint 规则也要跟着修正
+
+## Hard errors
+```
+- invalid YAML
+- missing version
+- missing title
+- duplicate node id
+- node missing id
+- node missing title
+- edge references missing node
+- set references missing node
+- invalid state
+```
+
+## Warnings
+```
+- closed node without state_note
+- blocked node without state_note and without incoming blocks edge
+- mainline set missing
+- frontier set missing
+- frontier set too large
+- too many orphan nodes
+- too many relates_to edges
+- edge has no kind
+- active node not reachable from mainline/frontier/archive/parking
+```
+
+注意：不再检查`closed.why`，而是检查：
+```
+state: closed but no state_note
+```
+
+这更通用。
+
+# 14. UI 层必须写成“可替换实现”
+
+你这个提醒非常重要。未来 UI 很可能被另一个 Agent 重构，所以 spec 必须分清：
+```
+目的 / View Contract / 实现建议
+```
+
+而不是把当前 HTML/CSS 当成产品定义。
+
+## 14.1 UI 目标
+
+Viewer 的目标不是“好看”，而是让用户快速恢复状态。
+
+必须支持用户回答：
+```
+1. 当前主线是什么？
+2. 当前前沿是什么？
+3. 什么被阻塞，为什么？
+4. 哪些路线关闭/归档？
+5. 某个节点为什么存在？
+6. 某个节点影响什么？
+7. 当前图谱有哪些 check warning？
+```
+
+## 14.2 UI Contract
+
+任何 UI 重构都必须保留这些能力：
+```
+- 展示 normalized graph
+- 切换 flow / cluster / frontier 视图
+- 按 node.kind 过滤
+- 按 node.state 过滤
+- 按 edge.kind 过滤
+- 按 set 过滤或高亮
+- 搜索节点 title / note / tag
+- 点击节点显示详情
+- 显示 incoming edges
+- 显示 outgoing edges
+- 显示 note / state_note
+- 显示 diagnostics
+- 可隐藏 closed / archived
+```
+
+这就是未来 UI Agent 需要忠实保留的“目的层”。
+
+## 14.3 UI Implementation 是可替换的
+
+v0 可以用：
+```
+plain TypeScript + Cytoscape.js + CSS
+```
+
+未来可以替换为：
+```
+Svelte / Solid / Vue / React
+```
+
+只要满足 UI Contract 即可。
+
+所以在 spec 里要明确：
+```
+viewer implementation is not normative.
+view behavior contract is normative.
+```
+
+即：
+
+**UI 实现不是规范，UI 行为契约才是规范。**
+
+# 15. spec/ 文档建议重组
+
+你提到内部需要维护`spec/`，我建议这样分：
+```
+spec/
+  PRODUCT_SPEC.md
+  GRAPH_SCHEMA.md
+  ENGINE_SPEC.md
+  VIEW_CONTRACT.md
+  AGENT_PROTOCOL.md
+```
+
+## PRODUCT_SPEC.md
+
+写：
+```
+- 目标
+- 非目标
+- 使用场景
+- 成功标准
+- 失败风险
+```
+
+## GRAPH_SCHEMA.md
+
+写：
+```
+- YAML schema
+- 字段语义
+- 字段分类：engine / semantic / natural language
+- examples
+```
+
+## ENGINE_SPEC.md
+
+写：
+```
+- CLI commands
+- check
+- serve
+- export
+- temp/cache policy
+- diagnostics format
+```
+
+## VIEW_CONTRACT.md
+
+写：
+```
+- UI 必须满足的能力
+- 视图类型
+- filter/focus/search/diagnostics 要求
+- 明确 UI 实现可替换
+```
+
+## AGENT_PROTOCOL.md
+
+内部 Agent 维护规则：
+```
+- Agent 如何更新 YAML
+- 哪些操作需要用户确认
+- 如何处理 long-running graph
+- 如何报告变更
+```
+
+另外用户侧 Skill：
+```
+skill/
+  SKILL.md
+```
+
+`skill/SKILL.md`面向使用者/Agent，不写内部实现细节，只写“如何使用 ExGraph 管理长线任务”。
+
+# 16. 修正版仓库结构
+```
+exgraph/
+  package.json
+  pnpm-lock.yaml
+  tsconfig.json
+  README.md
+
+  spec/
+    PRODUCT_SPEC.md
+    GRAPH_SCHEMA.md
+    ENGINE_SPEC.md
+    VIEW_CONTRACT.md
+    AGENT_PROTOCOL.md
+
+  skill/
+    SKILL.md
+
+  src/
+    cli.ts
+    parse.ts
+    schema.ts
+    normalize.ts
+    check.ts
+    serve.ts
+    export.ts
+
+  viewer/
+    index.html
+    main.ts
+    style.css
+    graph-adapter.ts
+    layouts.ts
+
+  examples/
+    basic.yaml
+    research.yaml
+    fiction.yaml
+    product.yaml
+```
+
+# 17. 最终修正后的 v0 定义
+
+一句话：
+
+**ExGraph v0 是一个 YAML-first、无工作区污染、UI 可替换的探索图谱渲染工具；它的核心规范是 graph schema、engine behavior 和 view contract，而不是某一版 HTML UI。**
+
+v0 实现目标：
+```
+1. User/Agent 只编辑 graph.yaml
+2. exgraph check 提供错误和维护性 warning
+3. exgraph serve graph.yaml 不污染工作目录
+4. viewer 从 normalized graph 渲染 flow / cluster / frontier
+5. UI 可被未来 Agent 重构，但必须遵守 VIEW_CONTRACT
+6. schema 保持最小结构化，复杂语义优先放入 note / state_note
+```
+
+我建议下一步确认这三个修正：
+```
+1. build 改名为 export，serve 默认零工作区写入
+2. closed 对象取消，改用 state_note
+3. spec 拆分为 PRODUCT / SCHEMA / ENGINE / VIEW_CONTRACT / AGENT_PROTOCOL
+```
+
+确认后，就可以开始进入项目骨架实现。</content>
+  </message>
+  <message role="user">
+    <content>小意见：如果是为了拓展性，那么`meta`-&gt;`extra`会更合适
+
+其他意见没有了</content>
+  </message>
+  <message role="assistant">
+    <content>采纳。`meta`改成`extra`更合适。
+
+理由：
+
+- `meta`容易被理解成**engine metadata**，暗示工具可能会解析或依赖它；
+- `extra`更像**用户/Agent 自定义扩展区**，语义更弱，边界更清楚；
+- 对 KISS 更友好：核心 schema 不膨胀，扩展信息放`extra`，engine 默认不解释。
+
+修正后的核心类型：
+```
+type ExGraph = {
+  version: string
+  title: string
+
+  nodes: Node[]
+  edges?: Edge[]
+  sets?: Record&lt;string, string[]&gt;
+  render?: RenderConfig
+
+  extra?: Record&lt;string, unknown&gt;
+}
+
+type Node = {
+  id: string
+  title: string
+
+  kind?: string
+  state?: NodeState
+
+  note?: string
+  state_note?: string
+
+  tags?: string[]
+  extra?: Record&lt;string, unknown&gt;
+}
+
+type Edge = {
+  from: string
+  to: string
+
+  kind?: string
+  label?: string
+  note?: string
+
+  tags?: string[]
+  extra?: Record&lt;string, unknown&gt;
+}
+```
+
+`extra`的规则也要写进 spec：
+```
+- extra 是用户/Agent 的扩展逃生口
+- engine v0 不依赖 extra 的任何字段
+- viewer 可以选择展示 extra，但不得要求 extra 存在
+- lint 不应基于 extra 做核心判断
+- domain-specific 信息优先放 extra，而不是扩张 core schema
+```
+
+示例：
+```
+nodes:
+  - id: h1
+    kind: hypothesis
+    state: active
+    title: YAML-first 图谱可以降低维护成本
+    note: User/Agent 只维护 YAML；engine 负责 check、layout、render。
+    tags: [frontier]
+    extra:
+      confidence: 0.65
+      owner: agent
+      domain_kind: research_hypothesis
+```
+
+最终确认的三点同步更新为：
+```
+1. build 改为 export，serve 默认不污染工作目录
+2. closed 对象取消，改用 state_note
+3. meta 全部改为 extra
+```
+
+现在可以进入项目骨架实现。</content>
+  </message>
+  <message role="user">
+    <content>请你开始，最后交付给我一个 zip</content>
+  </message>
+  <message role="assistant">
+    <content>已完成 ZIP：
+
+exgraph-v0.zip
+
+内容包括：
+```
+exgraph-v0/
+  spec/
+    PRODUCT_SPEC.md
+    GRAPH_SCHEMA.md
+    ENGINE_SPEC.md
+    VIEW_CONTRACT.md
+    AGENT_PROTOCOL.md
+
+  skill/
+    SKILL.md
+
+  src/
+    cli.ts
+    schema.ts
+    parse.ts
+    normalize.ts
+    check.ts
+    serve.ts
+    export.ts
+    ...
+
+  viewer/
+    index.html
+    main.ts
+    style.css
+
+  examples/
+    basic.yaml
+    research.yaml
+    fiction.yaml
+    product.yaml
+
+  README.md
+  package.json
+  tsconfig.json
+```
+
+当前实现形态：
+```
+pnpm install
+pnpm dev check examples/basic.yaml
+pnpm dev serve examples/basic.yaml
+pnpm dev export examples/basic.yaml -o /tmp/exgraph-export
+```
+
+已按你的意见处理：
+
+- `build`改为`export`
+- `serve`默认不污染`graph.yaml`所在目录
+- `meta`全部改为`extra`
+- 取消复杂`closed`对象，使用`state_note`
+- spec 中区分了产品目的、schema、engine、view contract、agent protocol
+- UI 被定义为可替换实现，规范约束放在`VIEW_CONTRACT.md`中</content>
+  </message>
+  <message role="user">
+    <content>告诉我我应该如何验证这是否符合我的期望</content>
+  </message>
+  <message role="assistant">
+    <content>## 验证目标
+
+不要先验证“图好不好看”。先验证它是否满足核心产品假设：
+
+**User / Agent 只改 YAML；Engine 自动 check / render / serve；用户能通过视图恢复长线任务状态。**
+
+建议按下面 7 个关卡验证。
+
+# 1. 基础运行验证
+
+解压后进入目录：
+```
+cd exgraph-v0
+pnpm install
+```
+
+运行 check：
+```
+pnpm exec tsx src/cli.ts check examples/basic.yaml
+```
+
+预期：
+```
+OK: ... nodes, ... edges.
+```
+
+启动 viewer：
+```
+pnpm exec tsx src/cli.ts serve examples/basic.yaml --port 4317 --open
+```
+
+浏览器应打开本地页面，能看到：
+```
+flow / cluster / frontier 视图切换
+node kind / state / edge kind filter
+set filter
+search
+点击节点显示详情
+```
+
+导出静态 HTML：
+```
+pnpm exec tsx src/cli.ts export examples/basic.yaml -o /tmp/exgraph-export
+```
+
+Windows PowerShell 可用：
+```
+pnpm exec tsx src/cli.ts export examples/basic.yaml -o &quot;$env:TEMP\exgraph-export&quot;
+```
+
+# 2. 工作区污染验证
+
+这是你明确关心的点。
+
+建议新建一个干净目录，只放一个 YAML：
+```
+mkdir /tmp/exgraph-user-test
+cp examples/basic.yaml /tmp/exgraph-user-test/graph.yaml
+pnpm exec tsx src/cli.ts serve /tmp/exgraph-user-test/graph.yaml --port 4317
+```
+
+然后检查：
+```
+ls -la /tmp/exgraph-user-test
+```
+
+预期：
+```
+只有 graph.yaml
+没有 dist/
+没有 .exgraph/
+没有 generated html
+没有 graph.json
+```
+
+`serve`必须是零工作区写入。只有显式`export -o &lt;dir&gt;`才允许写文件。
+
+# 3. Schema 可维护性验证
+
+你要测试的不是“schema 是否完整”，而是：
+
+Agent/User 写起来是否低负担，且不容易写错。
+
+拿`examples/basic.yaml`复制一份：
+```
+cp examples/basic.yaml /tmp/exgraph-user-test/graph-edit.yaml
+```
+
+手动加入一个新节点：
+```
+nodes:
+  - id: new-idea
+    kind: whatever_custom_kind
+    state: candidate
+    title: 一个自定义领域节点
+    note: &gt;
+      这里故意使用 unknown kind，测试 engine 是否允许 domain-specific 扩展。
+    tags: [frontier]
+    extra:
+      confidence: 0.6
+      domain_kind: fiction_scene
+```
+
+加入一条边：
+```
+edges:
+  - from: new-idea
+    to: g1
+    kind: custom_relation
+    label: 自定义关系
+    note: &gt;
+      测试 unknown edge kind 是否可以作为普通关系渲染。
+```
+
+运行：
+```
+pnpm exec tsx src/cli.ts check /tmp/exgraph-user-test/graph-edit.yaml
+```
+
+预期：
+```
+unknown kind 不应报 hard error
+extra 不应被 engine 强依赖
+节点仍能渲染
+```
+
+这说明基础模型没有把领域扩展卡死。
+
+# 4. Lint 价值验证
+
+故意制造几个错误/警告，看 check 是否帮你防止图谱腐化。
+
+## 4.1 缺失节点引用，应报 error
+```
+edges:
+  - from: missing-node
+    to: g1
+    kind: supports
+```
+
+预期：
+```
+error: edge references missing node
+```
+
+## 4.2 closed 节点缺少 state_note，应报 warning
+```
+nodes:
+  - id: dead-route
+    kind: option
+    state: closed
+    title: 已关闭路线
+```
+
+预期：
+```
+warning: closed node without state_note
+```
+
+## 4.3 set 引用不存在节点，应报 error
+```
+sets:
+  frontier: [not-exist]
+```
+
+预期：
+```
+error: set references missing node
+```
+
+这个环节的判断标准：
+
+`check`是否能防止 Agent 写出“看似合法、实际不可维护”的 graph.yaml。
+
+# 5. 视图契约验证
+
+打开`spec/VIEW_CONTRACT.md`，逐项对照当前 UI。
+
+必须满足：
+```
+- 能切换 flow / cluster / frontier
+- 能按 node.kind 过滤
+- 能按 node.state 过滤
+- 能按 edge.kind 过滤
+- 能按 set 过滤或高亮
+- 能搜索 title / note / tags
+- 点击节点显示详情
+- 显示 incoming edges
+- 显示 outgoing edges
+- 显示 note / state_note
+- 显示 diagnostics
+- 能隐藏 closed / archived
+```
+
+这里的关键判断：
+
+你未来不满意 HTML/CSS，可以换 UI；但这些能力不能丢。
+
+所以你不是在验收“这版 UI”，而是在验收**VIEW_CONTRACT 是否完整、UI 是否大体遵守契约**。
+
+# 6. 长线任务恢复验证
+
+这是最重要的实用性测试。
+
+你可以构造一个 15–25 节点的小图，模拟一个真实长线任务：
+```
+- 1 个 goal
+- 2–3 个 question
+- 3–5 个 hypothesis / option
+- 3–5 个 attempt / evidence
+- 2–3 个 decision
+- 2 个 closed route
+- sets.mainline
+- sets.frontier
+- sets.archive
+```
+
+然后隔一段时间，或让另一个 Agent 只看 YAML / viewer，尝试回答：
+```
+1. 当前主线是什么？
+2. 当前前沿是什么？
+3. 哪些节点 blocked？
+4. 哪些路线 closed / archived，为什么？
+5. 当前主线由哪些 evidence / decision 支撑？
+6. 下一步最应该处理什么？
+```
+
+验收标准：
+```
+30–60 秒内能恢复项目状态。
+不需要通读全部 YAML。
+不需要理解 UI 实现细节。
+```
+
+如果做不到，问题通常在三处：
+```
+- schema 字段不够表达状态
+- sets/mainline/frontier 不清楚
+- viewer 没有突出恢复上下文所需信息
+```
+
+# 7. Agent 使用验证
+
+让 Agent 做一次真实维护，而不是你手写。
+
+给 Agent 一个任务：
+```
+阅读这个 graph.yaml。
+根据下面的新讨论，更新图谱：
+- 新增一个 candidate 路线
+- 把一个 active 路线关闭
+- 说明关闭原因
+- 更新 frontier
+- 添加一条 supports 或 refutes 边
+- 运行 exgraph check
+- 汇报变化
+```
+
+你检查 Agent 是否遵守：
+```
+- 只改 YAML
+- 不改 viewer/generated files
+- 不写 x/y 坐标
+- 不滥加复杂字段
+- closed 节点写 state_note
+- 用 sets 更新 mainline/frontier/archive
+- 运行 check
+- 汇报的是语义变化，不是 dump 全文件
+```
+
+这能验证`skill/SKILL.md`和`spec/AGENT_PROTOCOL.md`是否足够约束 Agent。
+
+# 8. 工程完整性检查
+
+运行 TypeScript 编译：
+```
+pnpm build
+```
+
+然后运行编译产物：
+```
+node dist/src/cli.js check examples/basic.yaml
+```
+
+注意：我检查 ZIP 后发现一个小的 packaging 风险：
+```
+&quot;bin&quot;: {
+  &quot;exgraph&quot;: &quot;dist/cli.js&quot;
+}
+```
+
+但当前`tsconfig`的输出路径更可能是：
+```
+dist/src/cli.js
+```
+
+所以开发验证先用：
+```
+pnpm exec tsx src/cli.ts ...
+```
+
+或：
+```
+node dist/src/cli.js ...
+```
+
+正式打包前应修正二选一：
+```
+方案 A：package.json bin 改成 dist/src/cli.js
+方案 B：调整构建，让 cli 输出到 dist/cli.js
+```
+
+这不影响原型验证，但影响 npm/global CLI 使用。
+
+# 9. 最终验收标准
+
+我建议你按下面标准判断是否符合期望。
+
+## 通过
+```
+- YAML 写起来不别扭
+- Agent 不容易污染 schema
+- check 能抓出关键错误和维护风险
+- serve 不污染工作区
+- viewer 能帮助恢复 mainline / frontier / closed / blocked
+- UI 可替换，核心规范在 spec 中
+- 不需要手写布局坐标
+```
+
+## 不通过
+```
+- 写 YAML 比写普通笔记更痛苦
+- Agent 经常乱加字段
+- 图很漂亮但不能快速回答当前状态
+- closed / dead branch 看不到原因
+- frontier 不突出
+- serve 产生工作区垃圾文件
+- UI 逻辑和 schema 耦合太重，未来难以重构
+```
+
+你最应该优先验证第 6 和第 7 项：**长线任务恢复**与**Agent 维护行为**。这两个通过，才说明它确实解决了原问题。</content>
+  </message>
+  <message role="user">
+    <content>User included image: 图片(39).png - https://chatgpt.com/backend-api/estuary/content?id=file_00000000bc5871f5b11722d6f544ab61&amp;ts=494772&amp;p=fs&amp;cid=1&amp;sig=192833407e93a1291bcb13ade7f88683b53df6a5b77e4e6533c0ec33d8295645&amp;v=0
+
+可以了，我试了一下基本可行；不过看上去内部字体有点模糊不知道为啥</content>
+  </message>
+  <message role="assistant">
+    <content>基本可行说明核心链路没问题。截图里“内部字体模糊”的主要原因大概率不是系统字体，而是**Cytoscape 的 canvas 渲染 + 自动 fit 缩放导致节点标签被缩小绘制**。
+
+外部 UI 字体是 DOM 文本，所以清晰；图内部节点和边标签是 Cytoscape 在 canvas 上画的，`fit()`为了让整张图塞进画布，会把 graph 缩到较小 zoom，canvas 字体在缩放后就显得糊、小、灰。
+
+## 优先修正方向
+
+### 1. 不要默认把全图强行 fit 到画布
+
+当前看起来像：
+```
+cy.layout(...).run()
+cy.fit()
+```
+
+更适合改成：
+```
+cy.layout(layoutOptions).run()
+
+cy.ready(() =&gt; {
+  cy.minZoom(0.8)
+  cy.maxZoom(2.5)
+
+  // 只做温和 fit，不要过度缩小
+  cy.fit(undefined, 80)
+
+  if (cy.zoom() &lt; 0.9) {
+    cy.zoom(0.9)
+    cy.center()
+  }
+})
+```
+
+核心是：**宁可用户拖动/缩放查看，也不要牺牲文字清晰度把全图塞进去。**
+
+### 2. 增大节点与标签字号
+
+在`viewer/cytoscape-style.ts`或类似 Cytoscape style 定义中，把节点文本调大：
+```
+{
+  selector: &quot;node&quot;,
+  style: {
+    &quot;font-size&quot;: 14,
+    &quot;font-weight&quot;: 600,
+    &quot;label&quot;: &quot;data(label)&quot;,
+    &quot;text-wrap&quot;: &quot;wrap&quot;,
+    &quot;text-max-width&quot;: 120,
+    &quot;text-valign&quot;: &quot;center&quot;,
+    &quot;text-halign&quot;: &quot;center&quot;
+  }
+}
+```
+
+边标签可以小一点：
+```
+{
+  selector: &quot;edge&quot;,
+  style: {
+    &quot;font-size&quot;: 11,
+    &quot;text-rotation&quot;: &quot;autorotate&quot;,
+    &quot;label&quot;: &quot;data(label)&quot;
+  }
+}
+```
+
+当前节点文字在截图里明显偏小，尤其 flow 视图被横向压缩后更严重。
+
+### 3. 强制较高 canvas pixel ratio
+
+初始化 Cytoscape 时可以加：
+```
+const cy = cytoscape({
+  container,
+  elements,
+  style,
+  pixelRatio: window.devicePixelRatio || 1
+})
+```
+
+如果 Windows 缩放或浏览器缩放导致仍糊，也可以试：
+```
+pixelRatio: Math.max(2, window.devicePixelRatio || 1)
+```
+
+代价是性能稍降，但 v0 这种小图问题不大。
+
+### 4. Flow 视图应避免横向过长
+
+现在 flow 图整体被拉成一条长链，然后为了塞进画布被缩小。可以调`dagre`参数，让它更紧凑：
+```
+{
+  name: &quot;dagre&quot;,
+  rankDir: &quot;LR&quot;,
+  nodeSep: 70,
+  rankSep: 110,
+  edgeSep: 24,
+  fit: false,
+  padding: 80
+}
+```
+
+如果图较宽，甚至可以支持`rankDir: &quot;TB&quot;`切换，竖向布局在窄屏里更清晰。
+
+## 我建议的 v0 patch 原则
+
+不要过度优化 UI。只做三件事：
+```
+1. 默认 zoom 不低于 0.9
+2. 节点字体 / 节点尺寸增大
+3. Cytoscape pixelRatio 显式设为 devicePixelRatio 或 2
+```
+
+这应该能显著改善截图里的模糊感。
+
+## 顺带判断
+
+这不是架构问题，属于 viewer 层实现细节。`schema / engine / YAML-first / serve`这条主链路目前看是成立的。下一步可以先做一个小 patch，把 viewer 可读性修一下，不需要动 spec。</content>
+  </message>
+  <message role="user">
+    <content>默认字体建议用使用适合中文场景的，比如 Harmony OS Sanc , Jet brain mono 等等
+至于你说的这些改动使用下面的 patch block 格式给我```
+`
+❯❯❯ asq patch --prompt
+# Squire patch-edit format
+
+`asq patch` accepts structured patch blocks for local file edit.
+
+## Patch Block | 3 Type
+
+1) Targeted edit by str replace
+```
+patch
+# &lt;path&gt;[:&lt;range&gt;]
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; SEARCH
+old content
+=======
+new content
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; REPLACE```
+Line range (optional): 1based; `L10-L25`, `L10-`, `-L25`; only in SEARCH method.
+
+2) Create new file
+```
+patch
+# &lt;path&gt;
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; CREATE
+=======
+new file content
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; REPLACE```
+`
+3) Full overwrite
+```
+patch
+# &lt;path&gt;
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; OVERWRITE
+=======
+full replacement content
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; REPLACE```
+---
+
+- Fense-markers (&lt;,=,&gt;) appear alone per line, with 7 char repetitions
+- Section before &apos;===&apos; of CREATE and OVERWRITE MUST be empty
+
+## Multi-block bundles
+
+Multi-blocks patch is allowed to include concise human-readable explanations surrounding patch blocks. i.e. A text report includes
+patch blocks.
+```
+example
+First, xxx
+
+[[Patch Block]]
+
+Next, xxx
+
+[[Patch Block]]```
+WARN: Multi-blocks targeting the same file are matched against the original content. Overlapping matches cause all related blocks to fail
+```
+``</content>
+  </message>
+  <message role="assistant">
+    <content>下面 patch 做 4 件事：
+
+- DOM 默认字体改成中文友好栈：`HarmonyOS Sans SC / HarmonyOS Sans / MiSans / Microsoft YaHei UI / PingFang SC / Noto Sans CJK SC ...`
+- 代码/等宽区域改成`JetBrains Mono`优先。
+- Cytoscape canvas 明确使用高 DPI`pixelRatio`。
+- 调整节点/边文字大小、节点尺寸、默认 zoom 策略，避免强行 fit 导致图内文字过度缩小。
+```
+# viewer/style.css
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; SEARCH
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif;
+}
+=======
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.5 &quot;HarmonyOS Sans SC&quot;, &quot;HarmonyOS Sans&quot;, &quot;MiSans&quot;, &quot;Microsoft YaHei UI&quot;, &quot;PingFang SC&quot;, &quot;Noto Sans CJK SC&quot;, &quot;Source Han Sans SC&quot;, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+}
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; REPLACE
+```
+```
+# viewer/style.css
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; SEARCH
+pre { white-space: pre-wrap; word-break: break-word; background: var(--panel2); border: 1px solid var(--border); border-radius: 12px; padding: 10px; font-size: 12px; }
+=======
+code,
+pre {
+  font-family: &quot;JetBrains Mono&quot;, &quot;Cascadia Code&quot;, &quot;Fira Code&quot;, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  font-size: 12px;
+}
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; REPLACE
+```
+```
+# viewer/main.ts
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; SEARCH
+const edgeColor: Record&lt;string, string&gt; = {
+  decomposes_to: &apos;#64748b&apos;,
+  depends_on: &apos;#64748b&apos;,
+  supports: &apos;#16a34a&apos;,
+  refutes: &apos;#dc2626&apos;,
+  tests: &apos;#0ea5e9&apos;,
+  blocks: &apos;#f59e0b&apos;,
+  selects: &apos;#2563eb&apos;,
+  rejects: &apos;#dc2626&apos;,
+  supersedes: &apos;#7c3aed&apos;,
+  produces: &apos;#0891b2&apos;,
+  relates_to: &apos;#8a95a3&apos;,
+};
+=======
+const edgeColor: Record&lt;string, string&gt; = {
+  decomposes_to: &apos;#64748b&apos;,
+  depends_on: &apos;#64748b&apos;,
+  supports: &apos;#16a34a&apos;,
+  refutes: &apos;#dc2626&apos;,
+  tests: &apos;#0ea5e9&apos;,
+  blocks: &apos;#f59e0b&apos;,
+  selects: &apos;#2563eb&apos;,
+  rejects: &apos;#dc2626&apos;,
+  supersedes: &apos;#7c3aed&apos;,
+  produces: &apos;#0891b2&apos;,
+  relates_to: &apos;#8a95a3&apos;,
+};
+
+const sansFontStack = &apos;HarmonyOS Sans SC, HarmonyOS Sans, MiSans, Microsoft YaHei UI, PingFang SC, Noto Sans CJK SC, Source Han Sans SC, system-ui, sans-serif&apos;;
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; REPLACE
+```
+```
+# viewer/main.ts
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; SEARCH
+function setupCytoscape() {
+  const graph = payload.graph!;
+  cy = cytoscape({
+    container: document.getElementById(&apos;cy&apos;),
+    elements: [
+=======
+function setupCytoscape() {
+  const graph = payload.graph!;
+  const pixelRatio = Math.max(2, window.devicePixelRatio || 1);
+
+  cy = cytoscape({
+    container: document.getElementById(&apos;cy&apos;),
+    pixelRatio,
+    wheelSensitivity: 0.18,
+    elements: [
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; REPLACE
+```
+```
+# viewer/main.ts
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; SEARCH
+          &apos;font-size&apos;: 11,
+          &apos;font-weight&apos;: 700,
+          &apos;color&apos;: &apos;#1f2328&apos;,
+          &apos;text-wrap&apos;: &apos;wrap&apos;,
+          &apos;text-max-width&apos;: 128,
+          &apos;text-valign&apos;: &apos;center&apos;,
+          &apos;text-halign&apos;: &apos;center&apos;,
+          &apos;width&apos;: 138,
+          &apos;height&apos;: 54,
+          &apos;padding&apos;: 8,
+=======
+          &apos;font-family&apos;: sansFontStack,
+          &apos;font-size&apos;: 13,
+          &apos;font-weight&apos;: 700,
+          &apos;color&apos;: &apos;#ffffff&apos;,
+          &apos;text-wrap&apos;: &apos;wrap&apos;,
+          &apos;text-max-width&apos;: 152,
+          &apos;text-valign&apos;: &apos;center&apos;,
+          &apos;text-halign&apos;: &apos;center&apos;,
+          &apos;text-outline-width&apos;: 0,
+          &apos;width&apos;: 166,
+          &apos;height&apos;: 66,
+          &apos;padding&apos;: 10,
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; REPLACE
+```
+```
+# viewer/main.ts
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; SEARCH
+          &apos;font-size&apos;: 9,
+          &apos;text-background-color&apos;: &apos;#ffffff&apos;,
+          &apos;text-background-opacity&apos;: .8,
+          &apos;text-background-padding&apos;: 2,
+          &apos;color&apos;: &apos;#667085&apos;,
+=======
+          &apos;font-family&apos;: sansFontStack,
+          &apos;font-size&apos;: 11,
+          &apos;font-weight&apos;: 600,
+          &apos;text-background-color&apos;: &apos;#ffffff&apos;,
+          &apos;text-background-opacity&apos;: .86,
+          &apos;text-background-padding&apos;: 3,
+          &apos;color&apos;: &apos;#667085&apos;,
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; REPLACE
+```
+```
+# viewer/main.ts
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; SEARCH
+  const options = layoutOptions(layout);
+  cy.layout(options as cytoscape.LayoutOptions).run();
+  applyFilters();
+}
+=======
+  const options = layoutOptions(layout);
+  const layoutRun = cy.layout(options as cytoscape.LayoutOptions);
+
+  cy.one(&apos;layoutstop&apos;, () =&gt; {
+    applyFilters();
+    keepReadableViewport(layout);
+  });
+
+  layoutRun.run();
+}
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; REPLACE
+```
+```
+# viewer/main.ts
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; SEARCH
+function layoutOptions(layout: &apos;flow&apos; | &apos;cluster&apos; | &apos;frontier&apos;) {
+=======
+function keepReadableViewport(layout: &apos;flow&apos; | &apos;cluster&apos; | &apos;frontier&apos;) {
+  const visible = cy.elements().not(&apos;.hidden&apos;);
+  if (!visible.length) return;
+
+  cy.minZoom(0.75);
+  cy.maxZoom(2.8);
+
+  const padding = layout === &apos;flow&apos; ? 90 : 70;
+  cy.fit(visible, padding);
+
+  const minReadableZoom = layout === &apos;flow&apos; ? 0.88 : 0.82;
+  if (cy.zoom() &lt; minReadableZoom) {
+    cy.zoom({
+      level: minReadableZoom,
+      renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 },
+    });
+    cy.center(visible);
+  }
+}
+
+function layoutOptions(layout: &apos;flow&apos; | &apos;cluster&apos; | &apos;frontier&apos;) {
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; REPLACE
+```
+```
+# viewer/main.ts
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; SEARCH
+      animate: false,
+      fit: true,
+      padding: 40,
+=======
+      animate: false,
+      fit: false,
+      padding: 90,
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; REPLACE
+```
+```
+# viewer/main.ts
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; SEARCH
+      animate: false,
+      fit: true,
+      padding: 50,
+      nodeRepulsion: 6200,
+      idealEdgeLength: 110,
+=======
+      animate: false,
+      fit: false,
+      padding: 80,
+      nodeRepulsion: 7200,
+      idealEdgeLength: 140,
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; REPLACE
+```
+```
+# viewer/main.ts
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; SEARCH
+    animate: false,
+    fit: true,
+    padding: 50,
+    minNodeSpacing: 42,
+=======
+    animate: false,
+    fit: false,
+    padding: 80,
+    minNodeSpacing: 68,
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; REPLACE
+```
+
+应用后重新跑：
+```
+pnpm exec tsx src/cli.ts serve examples/basic.yaml --port 4317 --open
+```
+
+如果节点文字仍然偏糊，下一步优先把`minReadableZoom`从`0.88 / 0.82`提到`1.0`，代价是图更容易超出视口，需要用户拖动查看。</content>
+  </message>
+</conversation>
